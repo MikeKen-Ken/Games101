@@ -96,7 +96,7 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
         {
             vert.x() = 0.5 * width * (vert.x() + 1.0);
             vert.y() = 0.5 * height * (vert.y() + 1.0);
-            vert.z() = vert.z() * f1 + f2;
+            vert.z() = -vert.z() * f1 + f2;
         }
 
         for (int i = 0; i < 3; ++i)
@@ -123,46 +123,86 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
 {
     auto v = t.toVector4();
 
-    int min_x = floor(MIN(v[0].x(), MIN(v[1].x(), v[2].x())));
-    int max_x = ceil(MAX(v[0].x(), MAX(v[1].x(), v[2].x())));
-    int min_y = floor(MIN(v[0].y(), MIN(v[1].y(), v[2].y())));
-    int max_y = ceil(MAX(v[0].y(), MAX(v[1].y(), v[2].y())));
+    //* 取aabb包围盒
+    int min_x = MIN(v[0].x(), MIN(v[1].x(), v[2].x()));
+    int max_x = MAX(v[0].x(), MAX(v[1].x(), v[2].x()));
+    int min_y = MIN(v[0].y(), MIN(v[1].y(), v[2].y()));
+    int max_y = MAX(v[0].y(), MAX(v[1].y(), v[2].y()));
 
     float alpha;
     float beta;
     float gamma;
     float w_reciprocal;
     float z_interpolated;
-    Vector3f color;
+    int index;
+    Vector3f color = t.getColor();
     Vector3f point;
+    Vector3f colorWeight;
+    float weight;
 
-    // TODO : Find out the bounding box of current triangle.
-    // iterate through the pixel and find if the current pixel is inside the triangle
-    std::cout << "min " << v[0] << '\n';
-    std::cout << "min1 " << v[1] << '\n';
-    std::cout << "min2 " << v[2] << '\n';
-    // std::cout << "max: " << max_x << '\n';
+    bool SSAA = true;
+
+    // TODO :Find out the bounding box of current triangle.
+    // TODO :iterate through the pixel and find if the current pixel is inside the triangle
     for (int x = min_x; x < max_x; x++)
     {
         for (int y = min_y; y < max_y; y++)
         {
-            //If so, use the following code to get the interpolated z value.
-            bool ttt = insideTriangle((float)(x + 0.5), (float)(y + 0.5), t.v);
-            if (ttt)
+            //* 提高 这里需要对子采样点分别维护子采样点对应的深度列表和颜色列表
+            if (SSAA)
             {
-                int x = min_x;
-                int y = min_y;
-                std::tie(alpha, beta, gamma) = computeBarycentric2D((float)(x + 0.5), (float)(y + 0.5), t.v);
-                w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-                z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-                z_interpolated *= w_reciprocal;
-                // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-                if (depth_buf[get_index(x, y)] > z_interpolated)
+                colorWeight = {0, 0, 0};
+                weight = 0;
+                for (int xi = 1, xTimes = 0; xi < 4; xi += 2, xTimes++)
                 {
-                    color = t.getColor();
-                    point << (float)x, (float)y, z_interpolated;
-                    depth_buf[get_index(x, y)] = z_interpolated;
-                    set_pixel(point, color);
+                    for (int yi = 1, yTimes = 0; yi < 4; yi += 2, yTimes++)
+                    {
+                        std::tie(alpha, beta, gamma) = computeBarycentric2D(x + xi * 0.25, y + yi * 0.25, t.v);
+                        w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                        z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                        z_interpolated *= w_reciprocal;
+                        index = get_specific_index(x * 2 + xTimes, y * 2 + yTimes);
+                        //*　共四种情况
+                        //* 1.三角形内 距离视点近     采用近处也就是本三角形的t.color
+                        //* 2.三角形内 距离视点远     采用远处缓冲区的color
+                        //* 3.三角形外 距离视点近     采用远处缓冲区的color
+                        //* 4.三角形外 距离视点远     采用远处缓冲区的color
+                        if (z_interpolated < subdepth_buf[index] && insideTriangle(x + xi * 0.25, y + yi * 0.25, t.v))
+                        {
+                            subdepth_buf[index] = z_interpolated;
+                            color_buf[index] = color;
+                            colorWeight += color;
+                        }
+                        //* 采用远处缓冲区的color
+                        else
+                        {
+                            colorWeight += color_buf[index];
+                        }
+                        weight++;
+                    }
+                }
+                point << (float)x, (float)y, 1.0;
+                set_pixel(point, colorWeight / weight);
+            }
+            else
+            {
+                // TODO :If so, use the following code to get the interpolated z value.
+                //* 这里取像素中点判断是否在三角形内
+                if (insideTriangle(x + 0.5, y + 0.5, t.v))
+                {
+                    std::tie(alpha, beta, gamma) = computeBarycentric2D(x + 0.5, y + 0.5, t.v);
+                    w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                    z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                    z_interpolated *= w_reciprocal;
+
+                    // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+                    //* z进行了反转，所以z越大距离视点越远
+                    if (z_interpolated < depth_buf[get_index(x, y)])
+                    {
+                        point << (float)x, (float)y, 1.0;
+                        depth_buf[get_index(x, y)] = z_interpolated;
+                        set_pixel(point, color);
+                    }
                 }
             }
         }
@@ -188,11 +228,13 @@ void rst::rasterizer::clear(rst::Buffers buff)
 {
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color)
     {
-        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 0, 0});
+        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{255, 0, 0});
+        std::fill(color_buf.begin(), color_buf.end(), Eigen::Vector3f{255, 0, 0});
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
         std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
+        std::fill(subdepth_buf.begin(), subdepth_buf.end(), std::numeric_limits<float>::infinity());
     }
 }
 
@@ -200,11 +242,20 @@ rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
 {
     frame_buf.resize(w * h);
     depth_buf.resize(w * h);
+    //* 子采样点深度列表
+    subdepth_buf.resize(w * h * 4);
+    //* 子采样点颜色列表
+    color_buf.resize(w * h * 4);
 }
 
 int rst::rasterizer::get_index(int x, int y)
 {
     return (height - 1 - y) * width + x;
+}
+
+int rst::rasterizer::get_specific_index(int x, int y)
+{
+    return (height * 2 - 1 - y) * width * 2 + x;
 }
 
 void rst::rasterizer::set_pixel(const Eigen::Vector3f &point, const Eigen::Vector3f &color)

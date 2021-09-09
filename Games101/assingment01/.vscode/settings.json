@@ -1,6 +1,7 @@
 {
   "files.associations": {
     "*.txt": "log",
-    "core": "cpp"
+    "core": "cpp",
+    "cmath": "cpp"
   }
 }
