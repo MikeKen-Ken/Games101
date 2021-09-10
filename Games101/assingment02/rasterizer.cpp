@@ -140,7 +140,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
     Vector3f colorWeight;
     float weight;
 
-    bool SSAA = true;
+    bool MSAA = true;
 
     // TODO :Find out the bounding box of current triangle.
     // TODO :iterate through the pixel and find if the current pixel is inside the triangle
@@ -149,7 +149,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
         for (int y = min_y; y < max_y; y++)
         {
             //* 提高 这里需要对子采样点分别维护子采样点对应的深度列表和颜色列表
-            if (SSAA)
+            if (MSAA)
             {
                 colorWeight = {0, 0, 0};
                 weight = 0;
@@ -187,7 +187,6 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
             else
             {
                 // TODO :If so, use the following code to get the interpolated z value.
-                //* 这里取像素中点判断是否在三角形内
                 if (insideTriangle(x + 0.5, y + 0.5, t.v))
                 {
                     std::tie(alpha, beta, gamma) = computeBarycentric2D(x + 0.5, y + 0.5, t.v);

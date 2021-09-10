@@ -3,7 +3,7 @@
 //
 //
 // This loader is created by Robert Smith.
-// https://github.com/Bly7/OBJ-Loader
+// https://github.com/Bly7/OBJ-Loa der
 // Use the MIT license.
 
 
