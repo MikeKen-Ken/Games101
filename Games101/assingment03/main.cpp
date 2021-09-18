@@ -50,6 +50,38 @@ Eigen::Matrix4f get_model_matrix(float angle)
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar)
 {
     // TODO: Use the same projection matrix from the previous assignments
+    float r, l, t, b = 0.0;
+    t = tan(eye_fov / 2.0) * abs(zNear);
+    r = t * aspect_ratio;
+    l = -r;
+    b = -t;
+
+    Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
+
+    Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+    transform << 1.0, 0.0, 0.0, -(r + l) / 2.0,
+        0.0, 1.0, 0.0, -(t + b) / 2.0,
+        0.0, 0.0, 1.0, -(zNear + zFar) / 2.0,
+        0.0, 0.0, 0.0, 1.0;
+
+    Eigen::Matrix4f scale = Eigen::Matrix4f::Identity();
+    scale << 2.0 / (r - l), 0.0, 0.0, 0.0,
+        0.0, 2.0 / (t - b), 0.0, 0.0,
+        0.0, 0.0, 2.0 / (zNear - zFar), 0.0,
+        0.0, 0.0, 0.0, 1.0;
+
+    Eigen::Matrix4f orthographic = Eigen::Matrix4f::Identity();
+    orthographic = scale * transform;
+
+    Eigen::Matrix4f perspective = Eigen::Matrix4f::Identity();
+    perspective << zNear, 0.0, 0.0, 0.0,
+        0.0, zNear, 0.0, 0.0,
+        0.0, 0.0, zNear + zFar, -zNear * zFar,
+        0.0, 0.0, -1.0, 0.0;
+
+    projection = orthographic * perspective;
+
+    return projection;
 }
 
 Eigen::Vector3f vertex_shader(const vertex_shader_payload &payload)
@@ -294,6 +326,9 @@ int main(int argc, const char **argv)
             active_shader = displacement_fragment_shader;
         }
     }
+
+    //! 这里需要手动指定shader
+    active_shader = normal_fragment_shader;
 
     Eigen::Vector3f eye_pos = {0, 0, 10};
 

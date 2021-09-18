@@ -144,9 +144,10 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
 
     // TODO :Find out the bounding box of current triangle.
     // TODO :iterate through the pixel and find if the current pixel is inside the triangle
-    for (int x = min_x; x < max_x; x++)
+    //! 因为最大的像素点被int取整了一次，此处使用<=保证可以取到最远的像素点
+    for (int x = min_x; x <= max_x; x++)
     {
-        for (int y = min_y; y < max_y; y++)
+        for (int y = min_y; y <= max_y; y++)
         {
             //* 提高 这里需要对子采样点分别维护子采样点对应的深度列表和颜色列表
             if (SSAA)
