@@ -141,7 +141,12 @@ Eigen::Vector3f texture_fragment_shader(const fragment_shader_payload &payload)
     for (auto &light : lights)
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
-        // components are. Then, accumulate that result on the *result_color* object.
+        // TODO: components are. Then, accumulate that result on the *result_color* object.
+        //* std::pow 平方
+        Eigen::Vector3f ambient;
+        Eigen::Vector3f diffuse;
+        Eigen::Vector3f specular;
+        return_color += (ambient + diffuse + specular);
     }
 
     return result_color * 255.f;
@@ -170,7 +175,7 @@ Eigen::Vector3f phong_fragment_shader(const fragment_shader_payload &payload)
     for (auto &light : lights)
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
-        // components are. Then, accumulate that result on the *result_color* object.
+        // TODO: components are. Then, accumulate that result on the *result_color* object.
     }
 
     return result_color * 255.f;
@@ -328,7 +333,8 @@ int main(int argc, const char **argv)
     }
 
     //! 这里需要手动指定shader
-    active_shader = normal_fragment_shader;
+    // active_shader = normal_fragment_shader;
+    active_shader = phong_fragment_shader;
 
     Eigen::Vector3f eye_pos = {0, 0, 10};
 
