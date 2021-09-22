@@ -142,11 +142,6 @@ Eigen::Vector3f texture_fragment_shader(const fragment_shader_payload &payload)
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
         // TODO: components are. Then, accumulate that result on the *result_color* object.
-        //* std::pow 平方
-        Eigen::Vector3f ambient;
-        Eigen::Vector3f diffuse;
-        Eigen::Vector3f specular;
-        return_color += (ambient + diffuse + specular);
     }
 
     return result_color * 255.f;
@@ -172,10 +167,27 @@ Eigen::Vector3f phong_fragment_shader(const fragment_shader_payload &payload)
     Eigen::Vector3f normal = payload.normal;
 
     Eigen::Vector3f result_color = {0, 0, 0};
+
     for (auto &light : lights)
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular*
         // TODO: components are. Then, accumulate that result on the *result_color* object.
+
+        Eigen::Vector3f ambient = ka.cwiseProduct(amb_light_intensity);
+
+        Eigen::Vector3f lightDir = light.position - point;
+        Eigen::Vector3f eyeDir = eye_pos - point;
+
+        //* 两种方法求实际光照强度
+        float lightDistance = lightDir.norm();
+        Eigen::Vector3f realIntensity = light.intensity / (lightDistance * lightDistance);
+        // Eigen::Vector3f realIntensity = light.intensity / lightDir.dot(lightDir);
+
+        Eigen::Vector3f diffuse = kd.cwiseProduct(realIntensity * MAX(0.0, normal.dot(lightDir.normalized())));
+
+        Eigen::Vector3f specular = ks.cwiseProduct(realIntensity * std::pow(MAX(0.0, normal.dot((lightDir + eyeDir).normalized())), p));
+
+        result_color += (ambient + diffuse + specular);
     }
 
     return result_color * 255.f;
