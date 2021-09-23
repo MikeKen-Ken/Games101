@@ -140,7 +140,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
     Vector3f colorWeight;
     float weight;
 
-    bool SSAA = false;
+    bool MSAA = false;
 
     // TODO :Find out the bounding box of current triangle.
     // TODO :iterate through the pixel and find if the current pixel is inside the triangle
@@ -150,7 +150,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
         for (int y = min_y; y <= max_y; y++)
         {
             //* 提高 这里需要对子采样点分别维护子采样点对应的深度列表和颜色列表
-            if (SSAA)
+            if (MSAA)
             {
                 colorWeight = {0, 0, 0};
                 weight = 0;
@@ -171,7 +171,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
                         if (z_interpolated < subdepth_buf[index] && insideTriangle(x + xi * 0.25, y + yi * 0.25, t.v))
                         {
                             subdepth_buf[index] = z_interpolated;
-                            color_buf[index] = color;
+                            color_buf[index] = color; 
                             colorWeight += color;
                         }
                         //* 采用远处缓冲区的color
