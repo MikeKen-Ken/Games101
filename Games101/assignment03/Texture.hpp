@@ -62,8 +62,8 @@ public:
         auto color3 = image_data.at<cv::Vec3b>(minV, maxU);
         auto color4 = image_data.at<cv::Vec3b>(maxV, maxU);
 
-        float learpC1 = (u_img - minU) / (maxU / minU);
-        float learpC2 = (v_img - minV) / (maxV / minV);
+        float learpC1 = u_img - minU;
+        float learpC2 = v_img - minV;
         auto lerp1 = color1 * (1 - learpC1) + color3 * learpC1;
         auto lerp2 = color2 * (1 - learpC1) + color4 * learpC1;
         auto lerp3 = lerp1 * (1 - learpC2) + lerp2 * learpC2;
