@@ -126,8 +126,10 @@ inline bool Bounds3::IntersectP(const Ray &ray, const Vector3f &invDir,
 
     if (tenter < texit && texit >= 0)
     {
+        // std::cout << "true ";
         return true;
     }
+    // std::cout << "false ";
     return false;
 }
 

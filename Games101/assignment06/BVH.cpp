@@ -105,22 +105,51 @@ Intersection BVHAccel::Intersect(const Ray &ray) const
 
 Intersection BVHAccel::getIntersection(BVHBuildNode *node, const Ray &ray) const
 {
-    // TODO Traverse the BVH to find intersection
     if (node->left == nullptr)
     {
         return node->object->getIntersection(ray);
     }
+    // TODO Traverse the BVH to find intersection
     if (node->bounds.IntersectP(ray, ray.direction_inv, {int(ray.direction.x > 0), int(ray.direction.y > 0), int(ray.direction.z > 0)}))
     {
-        bool hit = node->left->bounds.IntersectP(ray, ray.direction_inv, {int(ray.direction.x > 0), int(ray.direction.y > 0), int(ray.direction.z > 0)});
-        bool hit1 = node->right->bounds.IntersectP(ray, ray.direction_inv, {int(ray.direction.x > 0), int(ray.direction.y > 0), int(ray.direction.z > 0)});
-        if (hit)
+        auto sett1 = getIntersection(node->left, ray);
+        auto sett2 = getIntersection(node->right, ray);
+        if (sett1.happened == true)
         {
-            getIntersection(node->left, ray);
+            return sett1;
         }
-        if (hit1)
+        else if (sett2.happened == true)
         {
-            getIntersection(node->right, ray);
+            return sett2;
         }
     }
+    Intersection isect;
+    return isect;
+
+    // Intersection isect;
+    // if (node->bounds.IntersectP(ray, ray.direction_inv, {int(ray.direction.x > 0), int(ray.direction.y > 0), int(ray.direction.z > 0)}))
+    // {
+    //     // bool hit1 = node->right->bounds.IntersectP(ray, ray.direction_inv, {int(ray.direction.x > 0), int(ray.direction.y > 0), int(ray.direction.z > 0)});
+    //     // if (node->left->bounds.IntersectP(ray, ray.direction_inv, {int(ray.direction.x > 0), int(ray.direction.y > 0), int(ray.direction.z > 0)}))
+    //     // {
+    //     auto isect1 = getIntersection(node->left, ray);
+    //     auto isect2 = getIntersection(node->right, ray);
+    //     if (isect1.happened == true)
+    //     {
+    //         return isect1;
+    //     }
+    //     if (isect2.happened == true)
+    //     {
+    //         return isect2;
+    //     }
+    //     // }
+    //     // if (hit1)
+    //     // {
+    //     //     return getIntersection(node->right, ray);
+    //     // }
+    // }
+    // else
+    // {
+    //     return isect;
+    // }
 }
