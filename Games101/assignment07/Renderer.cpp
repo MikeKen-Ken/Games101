@@ -24,7 +24,7 @@ void Renderer::Render(const Scene &scene)
 
     // change the spp value to change sample ammount
     // int spp = 16;
-    int spp = 1;
+    int spp = 2;
     std::cout << "SPP: " << spp << "\n";
     for (uint32_t j = 0; j < scene.height; ++j)
     {
