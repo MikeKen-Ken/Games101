@@ -96,6 +96,10 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
         {
             //* 直接光照
             Vector3f f_r = pInter.m->eval(ray.direction, ray1.direction, pInter.normal);
+            if (lightPdf <= 0.01)
+            {
+                lightPdf = 0.01;
+            }
             l_dir = lightInter.emit * f_r * dotProduct(ray1.direction, pInter.normal) * dotProduct(-ray1.direction, lightInter.normal) / (intersection.distance * intersection.distance) / lightPdf;
         }
 
@@ -111,6 +115,10 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
             {
                 Vector3f f_r1 = pInter.m->eval(ray.direction, wi, pInter.normal);
                 float pdf1 = pInter.m->pdf(ray.direction, wi, pInter.normal);
+                if (pdf1 <= 0.01)
+                {
+                    pdf1 = 0.01;
+                }
                 l_indir = castRay(ray2, depth + 1) * f_r1 * dotProduct(wi, pInter.normal) / pdf1 / RussianRoulette;
             }
         }
