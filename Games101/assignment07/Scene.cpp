@@ -78,6 +78,11 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
     {
         if (pInter.m->hasEmission())
         {
+            // 如果间接光照照射到了光源，
+            if (depth > 0)
+            {
+                return {0., 0., 0.};
+            }
             return {1., 1., 1.};
         }
         //光线和light的交点，初始化lightInter，并且拿到pdf
@@ -96,9 +101,10 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
         {
             //* 直接光照
             Vector3f f_r = pInter.m->eval(ray.direction, ray1.direction, pInter.normal);
-            if (lightPdf <= 0.01)
+            // 防止产生过亮的异常点
+            if (lightPdf <= EPSILON)
             {
-                lightPdf = 0.01;
+                lightPdf = EPSILON;
             }
             l_dir = lightInter.emit * f_r * dotProduct(ray1.direction, pInter.normal) * dotProduct(-ray1.direction, lightInter.normal) / (intersection.distance * intersection.distance) / lightPdf;
         }
@@ -115,9 +121,9 @@ Vector3f Scene::castRay(const Ray &ray, int depth) const
             {
                 Vector3f f_r1 = pInter.m->eval(ray.direction, wi, pInter.normal);
                 float pdf1 = pInter.m->pdf(ray.direction, wi, pInter.normal);
-                if (pdf1 <= 0.01)
+                if (pdf1 <= EPSILON)
                 {
-                    pdf1 = 0.01;
+                    pdf1 = EPSILON;
                 }
                 l_indir = castRay(ray2, depth + 1) * f_r1 * dotProduct(wi, pInter.normal) / pdf1 / RussianRoulette;
             }
