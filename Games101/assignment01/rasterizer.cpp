@@ -12,7 +12,6 @@ rst::pos_buf_id rst::rasterizer::load_positions(const std::vector<Eigen::Vector3
 {
     auto id = get_next_id();
     pos_buf.emplace(id, positions);
-
     return {id};
 }
 
@@ -20,7 +19,6 @@ rst::ind_buf_id rst::rasterizer::load_indices(const std::vector<Eigen::Vector3i>
 {
     auto id = get_next_id();
     ind_buf.emplace(id, indices);
-
     return {id};
 }
 
@@ -206,7 +204,7 @@ void rst::rasterizer::clear(rst::Buffers buff)
 {
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color)
     {
-        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 0, 0});
+        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 255, 0});
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
@@ -218,11 +216,6 @@ rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
 {
     frame_buf.resize(w * h);
     depth_buf.resize(w * h);
-}
-
-int rst::rasterizer::get_index(int x, int y)
-{
-    return (height - y) * width + x;
 }
 
 void rst::rasterizer::set_pixel(const Eigen::Vector3f &point, const Eigen::Vector3f &color)

@@ -171,7 +171,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
                         if (z_interpolated < subdepth_buf[index] && insideTriangle(x + xi * 0.25, y + yi * 0.25, t.v))
                         {
                             subdepth_buf[index] = z_interpolated;
-                            color_buf[index] = color; 
+                            color_buf[index] = color;
                             colorWeight += color;
                         }
                         //* 采用远处缓冲区的color
@@ -251,12 +251,14 @@ rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
 
 int rst::rasterizer::get_index(int x, int y)
 {
-    return (height - 1 - y) * width + x;
+    // old return (height - 1 - y) * width + x;
+    return x + std::max(0, (y - 1)) * width;
 }
 
 int rst::rasterizer::get_specific_index(int x, int y)
 {
-    return (height * 2 - 1 - y) * width * 2 + x;
+    // old  return (height * 2 - 1 - y) * width * 2 + x;
+    return x + std::max(0, (y - 1)) * width;
 }
 
 void rst::rasterizer::set_pixel(const Eigen::Vector3f &point, const Eigen::Vector3f &color)

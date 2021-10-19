@@ -38,7 +38,7 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     // 0.0, 0.0, 0.0, 0.0,
     // 0.0, 0.0, 0.0, 1.0;
 
-    //* 提高
+    //* 提高: 绕任意过原点的轴旋转
     Eigen::Matrix4f N;
     N << 0.0, -n.z(), n.y(), 0.0,
         n.z(), 0.0, -n.x(), 0.0,
