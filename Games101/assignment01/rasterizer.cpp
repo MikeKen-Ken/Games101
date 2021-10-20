@@ -135,11 +135,11 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
     {
         throw std::runtime_error("Drawing primitives other than triangle is not implemented yet!");
     }
-    auto &buf = pos_buf[pos_buffer.pos_id];
-    auto &ind = ind_buf[ind_buffer.ind_id];
+    auto &buf = pos_buf[pos_buffer.pos_id]; //* the vertex of triangle
+    auto &ind = ind_buf[ind_buffer.ind_id]; //* the index of the vertex
 
-    float f1 = (100 - 0.1) / 2.0;
-    float f2 = (100 + 0.1) / 2.0;
+    float f1 = (100 - 0.1) / 2.0; //49.95
+    float f2 = (100 + 0.1) / 2.0; //50.05 5045.05
 
     Eigen::Matrix4f mvp = projection * view * model;
     for (auto &i : ind)
@@ -151,11 +151,13 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
             mvp * to_vec4(buf[i[1]], 1.0f),
             mvp * to_vec4(buf[i[2]], 1.0f)};
 
+        //* after mvp, w may not 1.0f
         for (auto &vec : v)
         {
             vec /= vec.w();
         }
 
+        //* canonical view volume(clip space) to screen space
         for (auto &vert : v)
         {
             vert.x() = 0.5 * width * (vert.x() + 1.0);
@@ -165,8 +167,6 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
 
         for (int i = 0; i < 3; ++i)
         {
-            t.setVertex(i, v[i].head<3>());
-            t.setVertex(i, v[i].head<3>());
             t.setVertex(i, v[i].head<3>());
         }
 
