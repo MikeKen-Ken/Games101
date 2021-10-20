@@ -1,0 +1,123 @@
+    闫老师的课程受益匪浅，不过Windows环境搭建也走了不少弯路，好在最后成功了。
+    网上很多教程，但是有的细节没有涉及到，很容易出差错。
+    于是写了一篇比较详细的文章，整理了如下步骤，一来是方便自己查阅，再者希望可以帮后来学习的同学节省时间。
+    
+## 作业5报错的，参考文章最下面解决办法
+
+# 1. 安装CMake
+## (1) 下载CMake[安装包](https://cmake.org/download/)（选择后缀为**msi**的二进制文件下载）
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/b6cd7b4430f242ae9404a6efb4828b81~tplv-k3u1fbpfcp-watermark.image)
+## (2) 安装的时候选择**Add CMake to the system PATH for all users**(加入系统环境变量的路径)
+## (3) 检验是否安装成功(命令行输入cmake --help)
+# 2.安装Gcc编译器 mingw
+## (1) 下载[安装包](https://sourceforge.net/projects/mingw-w64/files/mingw-w64/)(选择**posix**版本)
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/cad9b5d36d8b4072b50577dda95a20a6~tplv-k3u1fbpfcp-watermark.image)
+
+## (2) 解压安装包，添加bin目录到系统环境变量PATH中
+## (3) 检验是否安装成功(命令行输入g++ -v)
+# 3. 安装VSCode，并安装如下插件
+(1) C/C++, microsoft
+
+(2) Cmake, twxs
+
+(3) Cmake Tool, microsoft
+# 4. Eigen库编译
+## (1) 下载[Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
+## (2) 解压到任意目录，在eigen根目录下新建文件夹build
+## (3) 打开安装好的软件CMake
+## (4)填入对应目录
+source对应目录填入eigen根目录  **(ie:C:\Users\Downloads\eigen)**
+
+build对应目录填入步骤(2)中新建build文件夹的目录   **(ie:C:\Users\Downloads\eigen\build)**
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d44f4e50d56548e3bc04cb5b8bf07c51~tplv-k3u1fbpfcp-watermark.image)
+
+## (5) 点击configure，弹出中格式选择MinGW Makefiles，点击Finish后等待runing结束
+## (6) 点击generate
+## (7) 管理员权限运行cmd，进入build目录，运行mingw32-make,运行mingw32-make install
+## (8) 删掉步骤(2)中解压出来的文件夹
+上述操作已经将eigen安装到了C盘Program File x86里了，防止build的时候找错路径找到这里来了
+
+# 5. OpenCV库编译
+## (1) 下载并安装[OpenCV](https://opencv.org/releases/)(我用的是3.1.4.10版本)
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/51824c12eb6f4aec9204911056e4d1ae~tplv-k3u1fbpfcp-watermark.image)
+
+## (2) 添加PATH环境变量
+E:\MinGW-w64\x64-4.8.1-release-posix-seh-rev5\mingw64\bin（注意根据你的实际安装路径填写）
+## (3) 根目录下新建文件夹opencv_mingw64_build
+## (4) 打开安装好的软件CMake
+## (5) 填写对应目录
+source对应目录填入opencv\sources目录
+     **(ie:C:\Users\Downloads\opencv\sources)**
+
+build对应目录填入步骤(3)中新建opencv_mingw64_build文件夹的目录   **(ie:C:\Users\Downloads\opencv\opencv_mingw64_buil)**
+## (6) 点击configure，弹出中格式选择MinGW Makefiles 和 Specify native compilers
+## (7) 点击next，设置路径
+Compiler C 路径为
+
+mingw64\bin\gcc.exe (ie:E:\MinGW-w64\x64-4.8.1-release-posix-seh-rev5\mingw64\bin\gcc.exe)，
+
+Complier C++路径为
+
+mingw64\bin\g++.exe
+
+(ie:E:\MinGW-w64\x64-4.8.1-release-posix-seh-rev5\mingw64\bin\g++.exe)
+
+（注意根据你的实际安装路径填写）
+## (8) 点击finsh，点击Configure
+## (9) 在如下位置搜索如下配置，并分别勾选或不勾选
+① 勾选WITH_OPENGL
+
+② 勾选ENABLE_CXX11
+
+③ 不勾选WITH_IPP
+
+④ 不勾选ENABLE_PRECOMPILED_HEADERS
+
+⑤ 不勾选OPENCV_ENABLE_ALLOCATOR_STATS
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/88c0091cd70a433aa919f23239ef63e1~tplv-k3u1fbpfcp-watermark.image)
+
+## (10) 点击Generate
+
+## (11) 管理员权限运行cmd，进入步骤三(3)新建opencv_mingw64_build文件夹目录下
+
+## (12) 运行命令mingw32-make -j 8 (-j 8 的意思是使用8个线程进行编译，请根据你的计算机配置合理设置线程数)
+## (13) 运行命令 mingw32-make install
+设置opencv的环境变量,管理员权限运行cmd, 执行 setx -m OpenCV_DIR path_to_build/lib/，然后把path_to_build/bin添加到path系统环境变量里
+# 6. 配置vscode
+## (1) 修改C++的包含路径配置
+增加C:\Program Files (x86)\Eigen3\include\
+
+![image.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/48b1133151904daeb48ff8bc01e5a73b~tplv-k3u1fbpfcp-watermark.image)
+
+## (2) CMakeLists填入eigen路径
+find_package(Eigen3 REQUIRED)
+
+include_directories("C:\\Program Files (x86)\\Eigen3\\include\\")
+
+![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/f4254eb49af94628b805bb790492de53~tplv-k3u1fbpfcp-watermark.image)
+
+## (3) VSCode中Ctrl+Shift+P，选择GCC
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5dd80603eb6b49bfbfff6aa4deb0c3ef~tplv-k3u1fbpfcp-watermark.image)
+
+## (4) 点击左下角build
+
+![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/95e4897ce52a4d348e3b4340df5a388a~tplv-k3u1fbpfcp-watermark.image)
+
+
+## [注]作业5编译报错
+修改CMakeLists.txt文件即可，可参考：
+
+![b603117c16353a23209388ea594ae62.png](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/8a6ce513b0f5410582ad2d09dd07208d~tplv-k3u1fbpfcp-watermark.image?)
+
+参考 ：
+
+[GAMES101课程环境搭建(Win10+VSCode) - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/259208999)
+
+[OpenCV使用CMake和MinGW-w64的编译安装_辉哈-CSDN博客](https://blog.csdn.net/huihut/article/details/81317102)
+
+[Get started with CMake Tools on Linux (visualstudio.com)](#_select-a-kit)
