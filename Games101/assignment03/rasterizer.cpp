@@ -181,6 +181,9 @@ void rst::rasterizer::draw(std::vector<Triangle *> &TriangleList)
     {
         Triangle newtri = *t;
 
+        //*每个三角形在进行正式的光栅化之前都至少需要经过 model, view, projection 变换，
+        //*由于投影变换会改变某一些透视关系不便于进行光线折射的计算，所以我们将经过了变换
+        //*model, view 变换的三角形坐标存储在数组 viewspace_pos 中
         std::array<Eigen::Vector4f, 3> mm{
             (view * model * t->v[0]),
             (view * model * t->v[1]),
@@ -195,7 +198,15 @@ void rst::rasterizer::draw(std::vector<Triangle *> &TriangleList)
             mvp * t->v[0],
             mvp * t->v[1],
             mvp * t->v[2]};
-        //Homogeneous division
+        // Homogeneous division
+
+        //*这里展开说明一下，使用的投影矩阵为
+        //*   n  0  0   0
+        //*   0  n  0   0
+        //*   0  0  n+f nf
+        //*   0  0  -1  0
+        //*那么对于每一个 v 中的元素 v[i]，其 x,y,z 坐标都对应了进行MVP变换之后的坐标，
+        //*但是 w 坐标保存了进行P变换的 z 坐标，这一点对于我们后续进行插值运算十分重要，这也是为何没有在齐次除法的时候进行
         for (auto &vec : v)
         {
             vec.x() /= vec.w();
@@ -209,7 +220,7 @@ void rst::rasterizer::draw(std::vector<Triangle *> &TriangleList)
             inv_trans * to_vec4(t->normal[1], 0.0f),
             inv_trans * to_vec4(t->normal[2], 0.0f)};
 
-        //Viewport transformation
+        // Viewport transformation
         for (auto &vert : v)
         {
             vert.x() = 0.5 * width * (vert.x() + 1.0);
@@ -219,13 +230,15 @@ void rst::rasterizer::draw(std::vector<Triangle *> &TriangleList)
 
         for (int i = 0; i < 3; ++i)
         {
-            //screen space coordinates
+            // screen space coordinates
             newtri.setVertex(i, v[i]);
         }
 
+        //*这个坐标是在摄像机空间中的坐标，也就是进行了 model, view 变换但是没有进行 projection 变换的坐标
+        //*，法线向量进行投影变换是没有意义的。
         for (int i = 0; i < 3; ++i)
         {
-            //view space normal
+            // view space normal
             newtri.setNormal(i, n[i].head<3>());
         }
 
@@ -254,10 +267,9 @@ static Eigen::Vector2f interpolate(float alpha, float beta, float gamma, const E
     return Eigen::Vector2f(u, v);
 }
 
-//Screen space rasterization
+// Screen space rasterization
 void rst::rasterizer::rasterize_triangle(const Triangle &t, const std::array<Eigen::Vector3f, 3> &view_pos)
 {
-    // TODO: From your HW3, get the triangle rasterization code.
     auto v = t.toVector4();
     //* 取aabb包围盒
     int min_x = MIN(v[0].x(), MIN(v[1].x(), v[2].x()));
@@ -281,13 +293,12 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t, const std::array<Eig
             //* 这里取像素中点判断是否在三角形内
             if (insideTriangle(x + 0.5, y + 0.5, t.v))
             {
-                //TODO: Inside your rasterization loop:
                 //* v[i].w() is the vertex view space depth value z.
                 //* Z is interpolated view space depth for the current pixel
                 //* zp is depth between zNear and zFar, used for z-buffer
-                // float Z = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-                // float zp = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-                // zp *= Z;
+                //  float Z = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                //  float zp = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                //  zp *= Z;
                 std::tie(alpha, beta, gamma) = computeBarycentric2D(x + 0.5, y + 0.5, t.v);
                 w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
                 z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
@@ -299,7 +310,6 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t, const std::array<Eig
                     point << (float)x, (float)y;
                     depth_buf[get_index(x, y)] = z_interpolated;
 
-                    // TODO: Interpolate the attributes:
                     auto interpolated_color = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);
                     auto interpolated_normal = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1);
                     auto interpolated_texcoords = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1);
@@ -335,7 +345,7 @@ void rst::rasterizer::clear(rst::Buffers buff)
 {
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color)
     {
-        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{255, 0, 0});
+        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 0, 0});
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
@@ -358,7 +368,7 @@ int rst::rasterizer::get_index(int x, int y)
 
 void rst::rasterizer::set_pixel(const Vector2i &point, const Eigen::Vector3f &color)
 {
-    //old index: auto ind = point.y() + point.x() * width;
+    // old index: auto ind = point.y() + point.x() * width;
     int ind = (height - point.y()) * width + point.x();
     frame_buf[ind] = color;
 }

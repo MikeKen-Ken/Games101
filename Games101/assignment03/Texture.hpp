@@ -71,4 +71,4 @@ public:
         return Eigen::Vector3f(lerp3[0], lerp3[1], lerp3[2]);
     }
 };
-#endif //RASTERIZER_TEXTURE_H
+#endif // RASTERIZER_TEXTURE_H

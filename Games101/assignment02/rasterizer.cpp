@@ -39,12 +39,7 @@ auto to_vec4(const Eigen::Vector3f &v3, float w = 1.0f)
 
 double sign_func(double x)
 {
-    if (x > 0)
-        return +1.0;
-    else if (x == 0)
-        return 0.0;
-    else
-        return -1.0;
+    return x > 0 ? 1 : (x == 0 ? 0.0 : -1.0);
 }
 
 static bool insideTriangle(float x, float y, const Vector3f *_v)
@@ -86,12 +81,12 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
             mvp * to_vec4(buf[i[0]], 1.0f),
             mvp * to_vec4(buf[i[1]], 1.0f),
             mvp * to_vec4(buf[i[2]], 1.0f)};
-        //Homogeneous division
+        // Homogeneous division
         for (auto &vec : v)
         {
             vec /= vec.w();
         }
-        //Viewport transformation
+        // Viewport transformation
         for (auto &vert : v)
         {
             vert.x() = 0.5 * width * (vert.x() + 1.0);
@@ -118,38 +113,33 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
     }
 }
 
-//Screen space rasterization
+// Screen space rasterization
 void rst::rasterizer::rasterize_triangle(const Triangle &t)
 {
     auto v = t.toVector4();
 
-    //* 取aabb包围盒
+    // TODO :Find out the bounding box of current triangle.
     int min_x = MIN(v[0].x(), MIN(v[1].x(), v[2].x()));
     int max_x = MAX(v[0].x(), MAX(v[1].x(), v[2].x()));
     int min_y = MIN(v[0].y(), MIN(v[1].y(), v[2].y()));
     int max_y = MAX(v[0].y(), MAX(v[1].y(), v[2].y()));
 
-    float alpha;
-    float beta;
-    float gamma;
-    float w_reciprocal;
-    float z_interpolated;
+    float alpha, beta, gamma, w_reciprocal, z_interpolated;
     int index;
     Vector3f color = t.getColor();
-    Vector3f point;
+    Vector3f point; // 像素点
     Vector3f colorWeight;
     float weight;
 
-    bool SSAA = false;
+    const bool SSAA = false;
 
-    // TODO :Find out the bounding box of current triangle.
     // TODO :iterate through the pixel and find if the current pixel is inside the triangle
-    //! 因为最大的像素点被int取整了一次，此处使用<=保证可以取到最远的像素点
+    //! 因为最大的像素点被int取整了一次，此处使用<=保证可以取到最远边界的像素点
     for (int x = min_x; x <= max_x; x++)
     {
         for (int y = min_y; y <= max_y; y++)
         {
-            //* 提高 这里需要对子采样点分别维护子采样点对应的深度列表和颜色列表
+            //* 提高 这里需要对采样点分别维护子采样点对应的深度列表和颜色列表
             if (SSAA)
             {
                 colorWeight = {0, 0, 0};
@@ -162,22 +152,22 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
                         w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
                         z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
                         z_interpolated *= w_reciprocal;
-                        index = get_specific_index(x * 2 + xTimes, y * 2 + yTimes);
+                        index = get_sub_index(x * 2 + xTimes, y * 2 + yTimes);
                         //*　共四种情况
                         //* 1.三角形内 距离视点近     采用近处也就是本三角形的t.color
                         //* 2.三角形内 距离视点远     采用远处缓冲区的color
                         //* 3.三角形外 距离视点近     采用远处缓冲区的color
                         //* 4.三角形外 距离视点远     采用远处缓冲区的color
-                        if (z_interpolated < subdepth_buf[index] && insideTriangle(x + xi * 0.25, y + yi * 0.25, t.v))
+                        if (z_interpolated > subdepth_buf[index] && insideTriangle(x + xi * 0.25, y + yi * 0.25, t.v))
                         {
                             subdepth_buf[index] = z_interpolated;
-                            color_buf[index] = color;
+                            subcolor_buf[index] = color;
                             colorWeight += color;
                         }
                         //* 采用远处缓冲区的color
                         else
                         {
-                            colorWeight += color_buf[index];
+                            colorWeight += subcolor_buf[index];
                         }
                         weight++;
                     }
@@ -188,17 +178,23 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
             else
             {
                 // TODO :If so, use the following code to get the interpolated z value.
-                //* 这里取像素中点判断是否在三角形内
+                //* 这里取像素 中心点 判断是否在三角形内
                 if (insideTriangle(x + 0.5, y + 0.5, t.v))
                 {
                     std::tie(alpha, beta, gamma) = computeBarycentric2D(x + 0.5, y + 0.5, t.v);
+                    //* v[i].w() 保存的是透视投影变换之前的z的值
                     w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                    //* 插值出来质心的z， z需要先除w归一化
                     z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                    //* 投影变换之后 质心是变化的
+                    //*通过这种方式，我们计算得到了当前扫描到的三角形片元中的点在这个三角形片元中的重心坐标，
+                    //*但是需要注意的一点是，经过 projection 变换，三角形重心坐标并不会保持不变，
+                    //*换句话说就是变换前后的点在三角形中的重心坐标并不是不变的，我们计算得到的重心坐标是变换后的三角形片元中的坐标，
+                    //*并不能直接用于插值，需要在计算出摄像机空间中这一点的重心坐标 α , β , γ \alpha,\beta,\gammaα,β,γ 后，
+                    //*依据这个重心坐标才能够进行插值计算，这也是下面这一段代码所作的事情
                     z_interpolated *= w_reciprocal;
-                    z_interpolated = -z_interpolated;
                     // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-                    //* deptp_buf 初始值为+inf，先转换z_value为正值，之后再做比较
-                    if (z_interpolated < depth_buf[get_index(x, y)])
+                    if (z_interpolated > depth_buf[get_index(x, y)])
                     {
                         point << (float)x, (float)y, 1.0;
                         depth_buf[get_index(x, y)] = z_interpolated;
@@ -230,12 +226,12 @@ void rst::rasterizer::clear(rst::Buffers buff)
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color)
     {
         std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{255, 0, 0});
-        std::fill(color_buf.begin(), color_buf.end(), Eigen::Vector3f{255, 0, 0});
+        std::fill(subcolor_buf.begin(), subcolor_buf.end(), Eigen::Vector3f{255, 0, 0});
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
-        std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
-        std::fill(subdepth_buf.begin(), subdepth_buf.end(), std::numeric_limits<float>::infinity());
+        std::fill(depth_buf.begin(), depth_buf.end(), -1 * std::numeric_limits<float>::infinity());
+        std::fill(subdepth_buf.begin(), subdepth_buf.end(), -1 * std::numeric_limits<float>::infinity());
     }
 }
 
@@ -246,25 +242,25 @@ rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
     //* 子采样点深度列表
     subdepth_buf.resize(w * h * 4);
     //* 子采样点颜色列表
-    color_buf.resize(w * h * 4);
+    subcolor_buf.resize(w * h * 4);
 }
 
+//* 拿到buffer，理论上来说只要保证每个xy只对应一个buffer[i]，什么方法存取都可以
 int rst::rasterizer::get_index(int x, int y)
 {
-    // old return (height - 1 - y) * width + x;
     return x + std::max(0, (y - 1)) * width;
 }
-
-int rst::rasterizer::get_specific_index(int x, int y)
+int rst::rasterizer::get_sub_index(int x, int y)
 {
-    // old  return (height * 2 - 1 - y) * width * 2 + x;
-    return x + std::max(0, (y - 1)) * width;
+    return x + std::max(0, (y - 1)) * 2 * width;
 }
-
+//* 此处颜色buffer顺序不能混乱
 void rst::rasterizer::set_pixel(const Eigen::Vector3f &point, const Eigen::Vector3f &color)
 {
-    //old index: auto ind = point.y() + point.x() * width;
+    // old index: auto ind = point.y() + point.x() * width;
     auto ind = (height - 1 - point.y()) * width + point.x();
+    //* 上下颠倒
+    // auto ind =  point.y() * width + point.x();
     frame_buf[ind] = color;
 }
 

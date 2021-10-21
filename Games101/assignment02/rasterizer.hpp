@@ -96,9 +96,9 @@ namespace rst
         int get_index(int x, int y);
 
         std::vector<float> subdepth_buf;
-        int get_specific_index(int x, int y);
+        int get_sub_index(int x, int y);
 
-        std::vector<Eigen::Vector3f> color_buf;
+        std::vector<Eigen::Vector3f> subcolor_buf;
 
         int width, height;
 
