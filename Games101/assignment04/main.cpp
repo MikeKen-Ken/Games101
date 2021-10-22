@@ -49,15 +49,16 @@ cv::Point2f recursive_bezier(const std::vector<cv::Point2f> &control_points, flo
 
 void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 {
-    // TODO: Iterate through all t = 0 to t = 1 with small steps, and call de Casteljau's
-    // recursive Bezier algorithm.
+    // TODO: Iterate through all t = 0 to t = 1 with small steps, and call de Casteljau's recursive Bezier algorithm.
 
     for (double t = 0.0; t <= 1.0; t += 0.0001)
     {
         auto point = recursive_bezier(control_points, t);
+
+        //* 首先，p点本身需要上色
         window.at<cv::Vec3b>(point.y, point.x)[1] = 255;
 
-        //* 提高
+        //* 提高 反走样
         float minX = std::floor(point.x);
         float minY = std::floor(point.y);
         float fract_x = point.x - minX;
@@ -79,8 +80,10 @@ void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 
         for (auto p : vec)
         {
+            //* 根据距离来计算，像素点的颜色
             float dis = cv::norm(p - point);
             float color = window.at<cv::Vec3b>(p.y, p.x)[1];
+            //* 如果所在点已经有颜色，则相比之下取最大值
             window.at<cv::Vec3b>(p.y, p.x)[1] = std::max(color, 255 * dis1 / dis);
         }
     }
@@ -98,7 +101,7 @@ int main()
     {
         for (auto &point : control_points)
         {
-            cv::circle(window, point, 3, {255, 255, 255}, 3);
+            cv::circle(window, point, 3, {255, 0, 255}, 3);
         }
 
         if (control_points.size() == 5)
