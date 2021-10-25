@@ -8,12 +8,12 @@
 
 constexpr float kInfinity = std::numeric_limits<float>::max();
 
-inline float clamp(const float& lo, const float& hi, const float& v)
+inline float clamp(const float &lo, const float &hi, const float &v)
 {
     return std::max(lo, std::min(hi, v));
 }
 
-inline bool solveQuadratic(const float& a, const float& b, const float& c, float& x0, float& x1)
+inline bool solveQuadratic(const float &a, const float &b, const float &c, float &x0, float &x1)
 {
     float discr = b * b - 4 * a * c;
     if (discr < 0)

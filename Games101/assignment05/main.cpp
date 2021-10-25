@@ -22,7 +22,7 @@ int main()
     scene.Add(std::move(sph1));
     scene.Add(std::move(sph2));
 
-    Vector3f verts[4] = {{-5,-3,-6}, {5,-3,-6}, {5,-3,-16}, {-5,-3,-16}};
+    Vector3f verts[4] = {{-5, -3, -6}, {5, -3, -6}, {5, -3, -16}, {-5, -3, -16}};
     uint32_t vertIndex[6] = {0, 1, 3, 1, 2, 3};
     Vector2f st[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     auto mesh = std::make_unique<MeshTriangle>(verts, vertIndex, 2, st);
@@ -30,7 +30,7 @@ int main()
 
     scene.Add(std::move(mesh));
     scene.Add(std::make_unique<Light>(Vector3f(-20, 70, 20), 0.5));
-    scene.Add(std::make_unique<Light>(Vector3f(30, 50, -12), 0.5));    
+    scene.Add(std::make_unique<Light>(Vector3f(30, 50, -12), 0.5));
 
     Renderer r;
     r.Render(scene);

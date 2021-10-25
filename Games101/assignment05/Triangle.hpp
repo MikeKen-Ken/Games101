@@ -58,6 +58,9 @@ bool rayTriangleIntersect(const Vector3f &va, const Vector3f &vb, const Vector3f
 class MeshTriangle : public Object
 {
 public:
+    // Vector3f verts[4] = {{-5, -3, -6}, {5, -3, -6}, {5, -3, -16}, {-5, -3, -16}};
+    // uint32_t vertIndex[6] = {0, 1, 3, 1, 2, 3};
+    // Vector2f st[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     MeshTriangle(const Vector3f *verts, const uint32_t *vertsIndex, const uint32_t &numTris, const Vector2f *st)
     {
         uint32_t maxIndex = 0;
@@ -65,11 +68,14 @@ public:
             if (vertsIndex[i] > maxIndex)
                 maxIndex = vertsIndex[i];
         maxIndex += 1;
+
         vertices = std::unique_ptr<Vector3f[]>(new Vector3f[maxIndex]);
         memcpy(vertices.get(), verts, sizeof(Vector3f) * maxIndex);
+
         vertexIndex = std::unique_ptr<uint32_t[]>(new uint32_t[numTris * 3]);
         memcpy(vertexIndex.get(), vertsIndex, sizeof(uint32_t) * numTris * 3);
         numTriangles = numTris;
+
         stCoordinates = std::unique_ptr<Vector2f[]>(new Vector2f[maxIndex]);
         memcpy(stCoordinates.get(), st, sizeof(Vector2f) * maxIndex);
     }
@@ -109,7 +115,7 @@ public:
         const Vector2f &st0 = stCoordinates[vertexIndex[index * 3]];
         const Vector2f &st1 = stCoordinates[vertexIndex[index * 3 + 1]];
         const Vector2f &st2 = stCoordinates[vertexIndex[index * 3 + 2]];
-        st = st0 * (1 - uv.x - uv.y) + st1 * uv.x + st2 * uv.y;
+        st = st0 * (1 - uv.x - uv.y) + st1 * uv.x + st2 * uv.y; //* st为纹理坐标，这里用barycentre差值计算了中心坐标
     }
 
     Vector3f evalDiffuseColor(const Vector2f &st) const override

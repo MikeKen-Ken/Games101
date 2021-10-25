@@ -10,28 +10,22 @@ inline float deg2rad(const float &deg)
 }
 
 // Compute reflection direction
+//* I and N are unit vectors
 Vector3f reflect(const Vector3f &I, const Vector3f &N)
 {
-    return I - 2 * dotProduct(I, N) * N;
+    return 2 * dotProduct(I, N) * N - I;
 }
 
-// [comment]
-// Compute refraction direction using Snell's law
-//
+// Compute refraction direction using //* Snell's law
 // We need to handle with care the two possible situations:
-//
 //    - When the ray is inside the object
-//
 //    - When the ray is outside.
-//
 // If the ray is outside, you need to make cosi positive cosi = -N.I
-//
 // If the ray is inside, you need to invert the refractive indices and negate the normal N
-// [/comment]
 Vector3f refract(const Vector3f &I, const Vector3f &N, const float &ior)
 {
     float cosi = clamp(-1, 1, dotProduct(I, N));
-    float etai = 1, etat = ior;
+    float etai = 1, etat = ior; //* index of refraction  折射率
     Vector3f n = N;
     if (cosi < 0)
     {
@@ -47,15 +41,10 @@ Vector3f refract(const Vector3f &I, const Vector3f &N, const float &ior)
     return k < 0 ? 0 : eta * I + (eta * cosi - sqrtf(k)) * n;
 }
 
-// [comment]
 // Compute Fresnel equation
-//
 // \param I is the incident view direction
-//
 // \param N is the normal at the intersection point
-//
 // \param ior is the material refractive index
-// [/comment]
 float fresnel(const Vector3f &I, const Vector3f &N, const float &ior)
 {
     float cosi = clamp(-1, 1, dotProduct(I, N));
@@ -83,9 +72,7 @@ float fresnel(const Vector3f &I, const Vector3f &N, const float &ior)
     // kt = 1 - kr;
 }
 
-// [comment]
 // Returns true if the ray intersects an object, false otherwise.
-//
 // \param orig is the ray origin
 // \param dir is the ray direction
 // \param objects is the list of objects the scene contains
@@ -94,7 +81,6 @@ float fresnel(const Vector3f &I, const Vector3f &N, const float &ior)
 // \param[out] uv stores the u and v barycentric coordinates of the intersected point
 // \param[out] *hitObject stores the pointer to the intersected object (used to retrieve material information, etc.)
 // \param isShadowRay is it a shadow ray. We can return from the function sooner as soon as we have found a hit.
-// [/comment]
 std::optional<hit_payload> trace(
     const Vector3f &orig, const Vector3f &dir,
     const std::vector<std::unique_ptr<Object>> &objects)
@@ -120,7 +106,6 @@ std::optional<hit_payload> trace(
     return payload;
 }
 
-// [comment]
 // Implementation of the Whitted-style light transport algorithm (E [S*] (D|G) L)
 //
 // This function is the function that compute the color at the intersection point
@@ -135,7 +120,6 @@ std::optional<hit_payload> trace(
 //
 // If the surface is diffuse/glossy we use the Phong illumation model to compute the color
 // at the intersection point.
-// [/comment]
 Vector3f castRay(
     const Vector3f &orig, const Vector3f &dir, const Scene &scene,
     int depth)
@@ -176,16 +160,12 @@ Vector3f castRay(
         }
         default:
         {
-            // [comment]
             // We use the Phong illumation model int the default case. The phong model
             // is composed of a diffuse and a specular reflection component.
-            // [/comment]
             Vector3f lightAmt = 0, specularColor = 0;
             Vector3f shadowPointOrig = (dotProduct(dir, N) < 0) ? hitPoint + N * scene.epsilon : hitPoint - N * scene.epsilon;
-            // [comment]
             // Loop over all lights in the scene and sum their contribution up
             // We also apply the lambert cosine law
-            // [/comment]
             for (auto &light : scene.get_lights())
             {
                 Vector3f lightDir = light->position - hitPoint;
@@ -214,11 +194,9 @@ Vector3f castRay(
     return hitColor;
 }
 
-// [comment]
 // The main render function. This where we iterate over all pixels in the image, generate
 // primary rays and cast these rays into the scene. The content of the framebuffer is
 // saved to a file.
-// [/comment]
 void Renderer::Render(const Scene &scene)
 {
     std::vector<Vector3f> framebuffer(scene.width * scene.height);
