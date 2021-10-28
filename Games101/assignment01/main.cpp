@@ -28,24 +28,28 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     // TODO: Then return it.
 
     float radian = rotation_angle * MY_PI / 180;
-    Eigen::Vector4f n = {1.0, 0.0, 0.0, 0.0};
-    Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
+    Eigen::Vector3f n = {0.0, 0.0, 1.0};
+    Eigen::Matrix4f model;
+    Eigen::Matrix3f tr = Eigen::Matrix3f::Identity();
 
     //* 普通作业
-    // model <<
-    // cos(radian), -sin(radian), 0.0, 0.0,
-    // sin(radian), cos(radian), 0.0, 0.0,
-    // 0.0, 0.0, 0.0, 0.0,
-    // 0.0, 0.0, 0.0, 1.0;
+    // model << cos(radian), -sin(radian), 0.0, 0.0,
+    //     sin(radian), cos(radian), 0.0, 0.0,
+    //     0.0, 0.0, 0.0, 0.0,
+    //     0.0, 0.0, 0.0, 1.0;
 
     //* 提高: 绕任意过原点的轴旋转
-    Eigen::Matrix4f N;
-    N << 0.0, -n.z(), n.y(), 0.0,
-        n.z(), 0.0, -n.x(), 0.0,
-        -n.y(), n.x(), 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0;
+    Eigen::Matrix3f N;
+    N << 0.0, -n.z(), n.y(),
+        n.z(), 0.0, -n.x(),
+        -n.y(), n.x(), 0.0;
 
-    model = cos(radian) * model + (1 - cos(radian)) * n * n.transpose() + sin(radian) * N;
+    tr = cos(radian) * tr + (1.0 - cos(radian)) * n * n.transpose() + sin(radian) * N;
+
+    model << tr(0, 0), tr(0, 1), tr(0, 2), 0,
+        tr(1, 0), tr(1, 1), tr(1, 2), 0,
+        tr(2, 0), tr(2, 1), tr(2, 2), 0,
+        0, 0, 0, 1;
 
     return model;
 }
@@ -138,13 +142,13 @@ int main(int argc, const char **argv)
         cv::imshow("image", image);
         key = cv::waitKey(10);
 
-        //std::cout << "frame count: " << frame_count++ << '\n';
+        std::cout << "frame count: " << key << '\n';
 
-        if (key == 97)
+        if (key == 87)
         {
             angle += 10;
         }
-        else if (key == 100)
+        else if (key == 83)
         {
             angle -= 10;
         }
