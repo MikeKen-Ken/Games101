@@ -45,14 +45,16 @@ double sign_func(double x)
 static bool insideTriangle(float x, float y, const Vector3f *_v)
 {
     // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
-    Eigen::Vector3f point = {x, y, 0.0};
-    float sign1 = (point - _v[0]).cross(_v[1] - _v[0]).z();
-    float sign2 = (point - _v[1]).cross(_v[2] - _v[1]).z();
-    float sign3 = (point - _v[2]).cross(_v[0] - _v[2]).z();
-    if (sign_func(sign1) == sign_func(sign2) && sign_func(sign2) == sign_func(sign3))
-    {
+    Vector3f v[3];
+    for (int i = 0; i < 3; i++)
+        v[i] = {_v[i].x(), _v[i].y(), 1.0};
+    Vector3f f0, f1, f2;
+    f0 = v[1].cross(v[0]);
+    f1 = v[2].cross(v[1]);
+    f2 = v[0].cross(v[2]);
+    Vector3f p(x, y, 1.);
+    if ((p.dot(f0) * f0.dot(v[2]) > 0) && (p.dot(f1) * f1.dot(v[0]) > 0) && (p.dot(f2) * f2.dot(v[1]) > 0))
         return true;
-    }
     return false;
 }
 

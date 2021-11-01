@@ -402,7 +402,7 @@ int main(int argc, const char **argv)
     // }
 
     //! 这里需要手动指定shader
-    std::function<Eigen::Vector3f(fragment_shader_payload)> active_shader = bump_fragment_shader;
+    std::function<Eigen::Vector3f(fragment_shader_payload)> active_shader = texture_fragment_shader;
     auto texture_path = "spot_textureCompress.png";
     r.set_texture(Texture(obj_path + texture_path));
 
