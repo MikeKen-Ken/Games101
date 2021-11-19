@@ -47,45 +47,184 @@ cv::Point2f recursive_bezier(const std::vector<cv::Point2f> &control_points, flo
     return recursive_bezier(temp_control_points1, t);
 }
 
+//* p to p1-p2 distance
+float distance(cv::Point2f p, cv::Point2f p1, cv::Point2f p2)
+{
+    cv::Vec2f v1(p - p1);
+    cv::Vec2f v2(p2 - p1);
+    float dis1 = cv::norm(p - p1);
+    float dis2 = cv::norm(p2 - p1);
+    return (v1.dot(v2) / (dis1 * dis2)) * dis1;
+}
+
+void drawPoint(cv::Point2f point, Eigen::Vector3f line_color, cv::Mat &window)
+{
+    //* 首先，p点本身需要上色
+    window.at<cv::Vec3b>(point.y, point.x)[1] = 255;
+
+    //* 提高 反走样
+    float minX = std::floor(point.x);
+    float minY = std::floor(point.y);
+    float fract_x = point.x - minX;
+    float fract_y = point.y - minY;
+    int x_flag = fract_x < 0.5f ? -1 : 1;
+    int y_flag = fract_y < 0.5f ? -1 : 1;
+
+    cv::Point2f p00 = cv::Point2f(minX + 0.5f, minY + 0.5f);
+    cv::Point2f p01 = cv::Point2f(minX + x_flag + 0.5f, minY + 0.5f);
+    cv::Point2f p10 = cv::Point2f(minX + 0.5f, minY + y_flag + 0.5f);
+    cv::Point2f p11 = cv::Point2f(minX + x_flag + 0.5f, minY + y_flag + 0.5f);
+
+    std::vector<cv::Point2f> vec;
+    vec.push_back(p01);
+    vec.push_back(p10);
+    vec.push_back(p11);
+
+    float dis1 = cv::norm(p00 - point);
+
+    for (auto p : vec)
+    {
+        //* 根据距离来计算，像素点的颜色
+        float dis = cv::norm(p - point);
+        float color = window.at<cv::Vec3b>(p.y, p.x)[1];
+        //* 如果所在点已经有颜色，则相比之下取最大值
+        window.at<cv::Vec3b>(p.y, p.x)[1] = std::max(color, 255 * dis1 / dis);
+    }
+}
+
+void draw_line(cv::Point2f begin, cv::Point2f end, cv::Mat &window)
+{
+    auto x1 = begin.x;
+    auto y1 = begin.y;
+    auto x2 = end.x;
+    auto y2 = end.y;
+
+    Eigen::Vector3f line_color = {255, 255, 255};
+
+    int x, y, dx, dy, dx1, dy1, px, py, xe, ye, i;
+
+    dx = x2 - x1;
+    dy = y2 - y1;
+    dx1 = fabs(dx);
+    dy1 = fabs(dy);
+    px = 2 * dy1 - dx1;
+    py = 2 * dx1 - dy1;
+
+    if (dy1 <= dx1)
+    {
+        if (dx >= 0)
+        {
+            x = x1;
+            y = y1;
+            xe = x2;
+        }
+        else
+        {
+            x = x2;
+            y = y2;
+            xe = x1;
+        }
+        cv::Point2f point = cv::Point2f(x, y);
+        drawPoint(point, line_color, window);
+        for (i = 0; x < xe; i++)
+        {
+            x = x + 1;
+            if (px < 0)
+            {
+                px = px + 2 * dy1;
+            }
+            else
+            {
+                if ((dx < 0 && dy < 0) || (dx > 0 && dy > 0))
+                {
+                    y = y + 1;
+                }
+                else
+                {
+                    y = y - 1;
+                }
+                px = px + 2 * (dy1 - dx1);
+            }
+            //            delay(0);
+            cv::Point2f point = cv::Point2f(x, y);
+            drawPoint(point, line_color, window);
+        }
+    }
+    else
+    {
+        if (dy >= 0)
+        {
+            x = x1;
+            y = y1;
+            ye = y2;
+        }
+        else
+        {
+            x = x2;
+            y = y2;
+            ye = y1;
+        }
+        cv::Point2f point = cv::Point2f(x, y);
+        drawPoint(point, line_color, window);
+        for (i = 0; y < ye; i++)
+        {
+            y = y + 1;
+            if (py <= 0)
+            {
+                py = py + 2 * dx1;
+            }
+            else
+            {
+                if ((dx < 0 && dy < 0) || (dx > 0 && dy > 0))
+                {
+                    x = x + 1;
+                }
+                else
+                {
+                    x = x - 1;
+                }
+                py = py + 2 * (dx1 - dy1);
+            }
+            //            delay(0);
+            cv::Point2f point = cv::Point2f(x, y);
+            drawPoint(point, line_color, window);
+        }
+    }
+}
+
 void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 {
     // TODO: Iterate through all t = 0 to t = 1 with small steps, and call de Casteljau's recursive Bezier algorithm.
-
+    std::vector<cv::Point2f> allPoints;
     for (double t = 0.0; t <= 1.0; t += 0.0001)
     {
         auto point = recursive_bezier(control_points, t);
+        allPoints.push_back(point);
+    }
 
-        //* 首先，p点本身需要上色
-        window.at<cv::Vec3b>(point.y, point.x)[1] = 255;
+    //* Use Ramer-Douglas-Peucker algorithm simplify the points
+    const float epsilon = 30;
 
-        //* 提高 反走样
-        float minX = std::floor(point.x);
-        float minY = std::floor(point.y);
-        float fract_x = point.x - minX;
-        float fract_y = point.y - minY;
-        int x_flag = fract_x < 0.5f ? -1 : 1;
-        int y_flag = fract_y < 0.5f ? -1 : 1;
-
-        cv::Point2f p00 = cv::Point2f(minX + 0.5f, minY + 0.5f);
-        cv::Point2f p01 = cv::Point2f(minX + x_flag + 0.5f, minY + 0.5f);
-        cv::Point2f p10 = cv::Point2f(minX + 0.5f, minY + y_flag + 0.5f);
-        cv::Point2f p11 = cv::Point2f(minX + x_flag + 0.5f, minY + y_flag + 0.5f);
-
-        std::vector<cv::Point2f> vec;
-        vec.push_back(p01);
-        vec.push_back(p10);
-        vec.push_back(p11);
-
-        float dis1 = cv::norm(p00 - point);
-
-        for (auto p : vec)
+    std::vector<cv::Point2f> simplifyPoints;
+    simplifyPoints.push_back(allPoints[0]);
+    int curretIndex = 0;
+    for (int i = 1; i < allPoints.size() - 1; i++)
+    {
+        float dis = distance(allPoints[i], allPoints[curretIndex], allPoints[allPoints.size() - 1]);
+        if (dis > epsilon)
         {
-            //* 根据距离来计算，像素点的颜色
-            float dis = cv::norm(p - point);
-            float color = window.at<cv::Vec3b>(p.y, p.x)[1];
-            //* 如果所在点已经有颜色，则相比之下取最大值
-            window.at<cv::Vec3b>(p.y, p.x)[1] = std::max(color, 255 * dis1 / dis);
+            curretIndex = i;
+            simplifyPoints.push_back(allPoints[i]);
         }
+    }
+    simplifyPoints.push_back(allPoints[allPoints.size() - 1]);
+
+    for (int i = 0; i < simplifyPoints.size() - 2; i++)
+    {
+        draw_line(simplifyPoints[i], simplifyPoints[i + 1], window);
+        //* Or draw the point
+        // Eigen::Vector3f line_color = {255, 255, 255};
+        // drawPoint(simplifyPoints[i], line_color, window);
     }
 }
 
