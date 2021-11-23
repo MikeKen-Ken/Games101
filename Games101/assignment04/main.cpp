@@ -49,7 +49,7 @@ cv::Point2f recursive_bezier(const std::vector<cv::Point2f> &control_points,
     return recursive_bezier(temp_control_points1, t);
 }
 
-//* p to p1-p2 distance
+//* p to segment p1-p2 distance
 float distance(cv::Point2f p, cv::Point2f p1, cv::Point2f p2)
 {
     cv::Vec2f v1(p - p1);
@@ -228,7 +228,7 @@ void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
     for (int i = 0; i < simplifyPoints.size() - 1; i++)
     {
         draw_line(simplifyPoints[i], simplifyPoints[i + 1], window);
-        //* Or draw the point
+        //* Or draw the points
         // Eigen::Vector3f line_color = {255, 255, 255};
         // drawPoint(simplifyPoints[i], line_color, window);
     }
@@ -261,7 +261,14 @@ bool compareCosine(PointWithCosine i1, PointWithCosine i2)
     return (i1.cosine > i2.cosine);
 }
 
-void convexHull(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
+enum ConvexHullAlgorithm
+{
+    Graham_Scan,
+    Chan
+};
+
+std::vector<cv::Point2f> getPointsByGrahamScan(
+    const std::vector<cv::Point2f> &control_points)
 {
     //* Graham's Scan algorithm
     std::vector<PointWithCosine> sortedPonts;
@@ -302,7 +309,60 @@ void convexHull(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
     }
     //* push end point
     resultPoints.push_back(botPoint);
+    return resultPoints;
+}
 
+findNextPointByTangent(onst std::vector<cv::Point2f> &control_points,
+                       cv::Point2f lastPoint)
+{
+    cv::Point2f lowestPonit;
+}
+
+void getConvexHull(const std::vector<cv::Point2f> &control_points,
+                   cv::Mat &window, ConvexHullAlgorithm type)
+{
+    std::vector<cv::Point2f> resultPoints;
+    switch (type)
+    {
+    case Graham_Scan: {
+        resultPoints = getPointsByGrahamScan(control_points);
+    }
+    case Chan: {
+        int pointsCount = control_points.size();
+        int botIndex = findTheBottomPointIndex(control_points);
+        cv::Point2f botPoint = control_points[botIndex];
+
+        for (int t = 1; t < pointsCount; t++)
+        {
+            resultPoints.clear();
+            int m = std::min(pointsCount, (int)std::pow(2, std::pow(2, t)));
+            int k = std::ceil((float)pointsCount / (float)m); // m = 4 k = 4
+            std::vector<std::vector<cv::Point2f>> subhulls;
+
+            for (int i = 0; i < k; i++)
+            {
+                std::vector<cv::Point2f> subPoints;
+                for (int j = 0; j < m; j++)
+                {
+                    if (j + i * m >= pointsCount)
+                    {
+                        break;
+                    }
+                    subPoints.push_back(control_points[j + i * m]);
+                }
+                subhulls.push_back(getPointsByGrahamScan(subPoints));
+            }
+            // find p0 with each subhull tangent , find all the lowest p1
+            resultPoints.push_back(botPoint);
+            resultPoints.push_back(
+                findNextPointByTangent(resultPoints.size() - 1, subhulls));
+            if (resultPoints[resultPoints.size() - 1] == botPoint)
+            {
+                break;
+            }
+        }
+    }
+    }
     for (int i = 0; i < resultPoints.size() - 1; i++)
     {
         draw_line(resultPoints[i], resultPoints[i + 1], window);
@@ -329,7 +389,7 @@ int main()
         {
             // naive_bezier(control_points, window);
             // bezier(control_points, window);
-            convexHull(control_points, window);
+            getConvexHull(control_points, window, ConvexHullAlgorithm::Chan);
 
             cv::imshow("Bezier Curve", window);
             cv::imwrite("my_bezier_curve.png", window);
