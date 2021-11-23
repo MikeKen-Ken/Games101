@@ -1,9 +1,0 @@
-node_modules/
-dist/
-library/
-temp/
-local/
-packages/
-settings/
-doc/
-*.json
