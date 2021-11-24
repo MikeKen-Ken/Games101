@@ -318,41 +318,6 @@ std::vector<cv::Point2f> getPointsByGrahamScan(
     resultPoints.push_back(botPoint);
     return resultPoints;
 }
-
-std::vector<cv::Point2f> findTangentPointsInSubhull(
-    std::vector<cv::Point2f> subhull, cv::Point2f externalPoint)
-{
-    std::vector<cv::Point2f> result;
-    //* find lowest the tangent lastPoint to subhull
-    for (int j = 0; j < subhull.size(); j++)
-    {
-        if (externalPoint == subhull[j])
-        {
-            continue;
-        }
-        int nextIndex = j + 1;
-        int lastIndex = j - 1;
-        if (j + 1 >= subhull.size())
-        {
-            nextIndex = 0;
-        }
-        if (j == 0)
-        {
-            lastIndex = subhull.size() - 1;
-        }
-
-        if ((subhull[j] - externalPoint)
-                    .cross(subhull[j] - subhull[nextIndex]) *
-                (subhull[j] - externalPoint)
-                    .cross(subhull[j] - subhull[lastIndex]) >=
-            0)
-        {
-            result.push_back(subhull[j]);
-        }
-    }
-    return result;
-}
-
 cv::Point2f normalizeV2(const cv::Point2f &v)
 {
     cv::Point2f res;
@@ -366,6 +331,58 @@ cv::Point2f normalizeV2(const cv::Point2f &v)
     }
 
     return v;
+}
+std::vector<cv::Point2f> findTangentPointsInSubhull(
+    std::vector<cv::Point2f> subhull, std::vector<cv::Point2f> resultPoints)
+{
+    std::vector<cv::Point2f> result;
+    cv::Point2f externalPoint = resultPoints[resultPoints.size() - 1];
+
+    cv::Vec2f vec1(1, 0);
+    if (resultPoints.size() > 1)
+    {
+        vec1 = (resultPoints[resultPoints.size() - 2] - externalPoint);
+    }
+    float maxCosine = 0;
+    // //* find lowest the tangent lastPoint to subhull
+    // //* TODO binary search
+    for (int j = 0; j < subhull.size(); j++)
+    {
+        if (externalPoint.x == subhull[j].x && externalPoint.y == subhull[j].y)
+        {
+            continue;
+        }
+
+        cv::Vec2f vec(subhull[j] - externalPoint);
+        float cosine = std::acos(normalizeV2(vec1).dot(normalizeV2(vec)));
+        if (cosine > maxCosine)
+        {
+            maxCosine = cosine;
+            result.clear();
+            result.push_back(subhull[j]);
+        }
+
+        // int nextIndex = j + 1;
+        // int lastIndex = j - 1;
+        // if (j + 1 >= subhull.size())
+        // {
+        //     nextIndex = 0;
+        // }
+        // if (j == 0)
+        // {
+        //     lastIndex = subhull.size() - 1;
+        // }
+
+        // if ((subhull[j] - externalPoint)
+        //             .cross(subhull[j] - subhull[nextIndex]) *
+        //         (subhull[j] - externalPoint)
+        //             .cross(subhull[j] - subhull[lastIndex]) >=
+        //     0)
+        // {
+        //     result.push_back(subhull[j]);
+        // }
+    }
+    return result;
 }
 
 void findNextPointByTangent(std::vector<std::vector<cv::Point2f>> subhulls,
@@ -387,11 +404,11 @@ void findNextPointByTangent(std::vector<std::vector<cv::Point2f>> subhulls,
 
     for (int i = 0; i < subhulls.size(); i++)
     {
-        std::vector<cv::Point2f> tt = findTangentPointsInSubhull(
-            subhulls[i], resultPoints[resultPoints.size() - 1]);
-        for (int j = 0; j < tt.size(); j++)
+        std::vector<cv::Point2f> subTangents =
+            findTangentPointsInSubhull(subhulls[i], resultPoints);
+        for (int j = 0; j < subTangents.size(); j++)
         {
-            tangentPoints.push_back(tt[j]);
+            tangentPoints.push_back(subTangents[j]);
         }
     }
 
@@ -469,7 +486,6 @@ void getConvexHull(const std::vector<cv::Point2f> &control_points,
         break;
     }
     }
-
     //* test is tanget function is fine
     // int pointsCount = control_points.size();
     // cv::Point2f botPoint =
