@@ -7,11 +7,11 @@ std::vector<cv::Point2f> control_points;
 
 void mouse_handler(int event, int x, int y, int flags, void *userdata)
 {
-    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 15)
+    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 5)
     {
         std::cout << "Left button of the mouse is clicked - position (" << x
-                  << ", " << 700 - y << ")" << '\n';
-        control_points.emplace_back(x, 700 - y);
+                  << ", " << y << ")" << '\n';
+        control_points.emplace_back(x, y);
     }
 }
 
@@ -28,7 +28,7 @@ void naive_bezier(const std::vector<cv::Point2f> &points, cv::Mat &window)
                      3 * t * std::pow(1 - t, 2) * p_1 +
                      3 * std::pow(t, 2) * (1 - t) * p_2 + std::pow(t, 3) * p_3;
 
-        window.at<cv::Vec3b>(700 - point.y, point.x)[2] = 255;
+        window.at<cv::Vec3b>(point.y, point.x)[2] = 255;
     }
 }
 
@@ -62,7 +62,7 @@ float distance(cv::Point2f p, cv::Point2f p1, cv::Point2f p2)
 void drawPoint(cv::Point2f point, Eigen::Vector3f line_color, cv::Mat &window)
 {
     //* 首先，p点本身需要上色
-    window.at<cv::Vec3b>(700 - point.y, point.x)[1] = 255;
+    window.at<cv::Vec3b>(point.y, point.x)[1] = 255;
 
     //* 提高 反走样
     float minX = std::floor(point.x);
@@ -88,10 +88,9 @@ void drawPoint(cv::Point2f point, Eigen::Vector3f line_color, cv::Mat &window)
     {
         //* 根据距离来计算，像素点的颜色
         float dis = cv::norm(p - point);
-        float color = window.at<cv::Vec3b>(700 - p.y, p.x)[1];
+        float color = window.at<cv::Vec3b>(p.y, p.x)[1];
         //* 如果所在点已经有颜色，则相比之下取最大值
-        window.at<cv::Vec3b>(700 - p.y, p.x)[1] =
-            std::max(color, 255 * dis1 / dis);
+        window.at<cv::Vec3b>(p.y, p.x)[1] = std::max(color, 255 * dis1 / dis);
     }
 }
 
@@ -258,54 +257,34 @@ struct Interval
 
 bool compareInterval(Interval i1, Interval i2)
 {
-    return (i1.cosine > i2.cosine);
+    return (i1.cosine < i2.cosine);
 }
 
 void convexHull(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 {
     //* Graham's Scan algorithm
     std::vector<Interval> sortedPonts;
+    // Interval sortedPonts[control_points.size() - 1];
     int botIndex = findTheBottomPointIndex(control_points);
     cv::Point2f botPoint = control_points[botIndex];
-    cv::Point2f xAxis(1, 0);
+    std::cout << "botPoint: " << botIndex << '\n';
+    cv::Point2f xPoint(1, 0);
     for (int i = 0; i < control_points.size(); i++)
     {
         if (i == botIndex)
         {
             continue;
         }
-        float cosine = (control_points[i] - botPoint).dot(xAxis) /
+        float cosine = (control_points[i] - botPoint).dot(xPoint) /
                        cv::norm(control_points[i] - botPoint);
         sortedPonts.push_back({cosine, control_points[i]});
     }
+
+   
     std::sort(sortedPonts.begin(), sortedPonts.end(), compareInterval);
-
-    std::vector<cv::Point2f> resultPoints;
-    //* push start point
-    resultPoints.push_back(botPoint);
-    resultPoints.push_back(sortedPonts[0].point);
-    for (int i = 1; i < sortedPonts.size(); i++)
+    for (int i = 0; i < control_points.size() - 1; i++)
     {
-        float cosine = (resultPoints[resultPoints.size() - 1] -
-                        resultPoints[resultPoints.size() - 2])
-                           .cross(sortedPonts[i].point -
-                                  resultPoints[resultPoints.size() - 1]);
-        if (cosine > 0)
-        {
-            resultPoints.push_back(sortedPonts[i].point);
-        }
-        else if (cosine <= 0)
-        {
-            resultPoints.pop_back();
-            i--;
-        }
-    }
-    //* push end point
-    resultPoints.push_back(botPoint);
-
-    for (int i = 0; i < resultPoints.size() - 1; i++)
-    {
-        draw_line(resultPoints[i], resultPoints[i + 1], window);
+        std::cout << "frame count: " << sortedPonts[i].cosine << '\n';
     }
 }
 
@@ -321,11 +300,10 @@ int main()
     {
         for (auto &point : control_points)
         {
-            cv::circle(window, cv::Point2f(point.x, 700 - point.y), 3,
-                       {255, 0, 255}, 3);
+            cv::circle(window, point, 3, {255, 0, 255}, 3);
         }
 
-        if (control_points.size() == 15)
+        if (control_points.size() == 5)
         {
             // naive_bezier(control_points, window);
             // bezier(control_points, window);
