@@ -7,7 +7,7 @@ std::vector<cv::Point2f> control_points;
 
 void mouse_handler(int event, int x, int y, int flags, void *userdata)
 {
-    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 5)
+    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 18)
     {
         std::cout << "Left button of the mouse is clicked - position (" << x
                   << ", " << 700 - y << ")" << '\n';
@@ -264,11 +264,6 @@ bool compareCosine(PointWithCosine i1, PointWithCosine i2)
     return (i1.cosine > i2.cosine);
 }
 
-bool compareCosine1(PointWithCosine i1, PointWithCosine i2)
-{
-    return (i1.cosine < i2.cosine);
-}
-
 enum ConvexHullAlgorithm
 {
     Graham_Scan,
@@ -323,7 +318,20 @@ std::vector<cv::Point2f> getPointsByGrahamScan(
     resultPoints.push_back(botPoint);
     return resultPoints;
 }
+cv::Point2f normalizeV2(const cv::Point2f &v)
+{
+    cv::Point2f res;
+    float mag2 = v.x * v.x + v.y * v.y;
+    if (mag2 > 0)
+    {
+        float invMag = 1 / sqrtf(mag2);
+        res.x = v.x * invMag;
+        res.y = v.y * invMag;
+        return res;
+    }
 
+    return v;
+}
 std::vector<cv::Point2f> findTangentPointsInSubhull(
     std::vector<cv::Point2f> subhull, std::vector<cv::Point2f> resultPoints)
 {
@@ -335,7 +343,8 @@ std::vector<cv::Point2f> findTangentPointsInSubhull(
     {
         vec1 = (resultPoints[resultPoints.size() - 2] - externalPoint);
     }
-    float maxCosine = -999;
+    float maxCosine = 0;
+    // //* find lowest the tangent lastPoint to subhull
     // //* TODO binary search
     for (int j = 0; j < subhull.size(); j++)
     {
@@ -345,8 +354,8 @@ std::vector<cv::Point2f> findTangentPointsInSubhull(
         }
 
         cv::Vec2f vec(subhull[j] - externalPoint);
-        float cosine = vec1.dot(vec) / (cv::norm(vec1) * cv::norm(vec));
-        if (maxCosine == -999 || cosine < maxCosine)
+        float cosine = std::acos(normalizeV2(vec1).dot(normalizeV2(vec)));
+        if (cosine > maxCosine)
         {
             maxCosine = cosine;
             result.clear();
@@ -382,12 +391,12 @@ void findNextPointByTangent(std::vector<std::vector<cv::Point2f>> subhulls,
     cv::Vec2f v1;
     if (resultPoints.size() <= 1)
     {
-        v1 = (-1, 0);
+        v1 = (1, 0);
     }
     else
     {
-        v1 = (resultPoints[resultPoints.size() - 2] -
-              resultPoints[resultPoints.size() - 1]);
+        v1 = (resultPoints[resultPoints.size() - 1] -
+              resultPoints[resultPoints.size() - 2]);
     }
 
     //* the each subhull lowest tangent points
@@ -407,10 +416,10 @@ void findNextPointByTangent(std::vector<std::vector<cv::Point2f>> subhulls,
     for (int i = 0; i < tangentPoints.size(); i++)
     {
         cv::Vec2f vec(tangentPoints[i] - resultPoints[resultPoints.size() - 1]);
-        float cosine = v1.dot(vec) / (cv::norm(v1) * cv::norm(vec));
+        float cosine = normalizeV2(v1).dot(normalizeV2(vec));
         sortedPonts.push_back({cosine, tangentPoints[i]});
     }
-    std::sort(sortedPonts.begin(), sortedPonts.end(), compareCosine1);
+    std::sort(sortedPonts.begin(), sortedPonts.end(), compareCosine);
 
     resultPoints.push_back(sortedPonts[0].point);
 }
@@ -506,7 +515,7 @@ int main()
                        {255, 0, 255}, 3);
         }
 
-        if (control_points.size() == 5)
+        if (control_points.size() == 18)
         {
             // naive_bezier(control_points, window);
             // bezier(control_points, window);
