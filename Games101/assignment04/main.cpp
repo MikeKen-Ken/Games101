@@ -1,16 +1,16 @@
 #include <chrono>
-#include <eigen3/Eigen/Eigen>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <eigen3/Eigen/Eigen>
 
 std::vector<cv::Point2f> control_points;
 
 void mouse_handler(int event, int x, int y, int flags, void *userdata)
 {
-    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 15)
+    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 5)
     {
-        std::cout << "Left button of the mouse is clicked - position (" << x
-                  << ", " << y << ")" << '\n';
+        std::cout << "Left button of the mouse is clicked - position (" << x << ", "
+                  << y << ")" << '\n';
         control_points.emplace_back(x, y);
     }
 }
@@ -24,16 +24,14 @@ void naive_bezier(const std::vector<cv::Point2f> &points, cv::Mat &window)
 
     for (double t = 0.0; t <= 1.0; t += 0.001)
     {
-        auto point = std::pow(1 - t, 3) * p_0 +
-                     3 * t * std::pow(1 - t, 2) * p_1 +
+        auto point = std::pow(1 - t, 3) * p_0 + 3 * t * std::pow(1 - t, 2) * p_1 +
                      3 * std::pow(t, 2) * (1 - t) * p_2 + std::pow(t, 3) * p_3;
 
         window.at<cv::Vec3b>(point.y, point.x)[2] = 255;
     }
 }
 
-cv::Point2f recursive_bezier(const std::vector<cv::Point2f> &control_points,
-                             float t)
+cv::Point2f recursive_bezier(const std::vector<cv::Point2f> &control_points, float t)
 {
     // TODO: Implement de Casteljau's algorithm
     std::vector<cv::Point2f> temp_control_points1;
@@ -196,8 +194,7 @@ void draw_line(cv::Point2f begin, cv::Point2f end, cv::Mat &window)
 
 void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 {
-    // TODO: Iterate through all t = 0 to t = 1 with small steps, and call de
-    // Casteljau's recursive Bezier algorithm.
+    // TODO: Iterate through all t = 0 to t = 1 with small steps, and call de Casteljau's recursive Bezier algorithm.
     std::vector<cv::Point2f> allPoints;
     for (double t = 0.0; t <= 1.0; t += 0.0001)
     {
@@ -210,52 +207,24 @@ void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 
     std::vector<cv::Point2f> simplifyPoints;
     simplifyPoints.push_back(allPoints[0]);
-    int curIndex = 0;
-    int length = allPoints.size();
-    for (int i = 1; i < length - 1; i++)
+    int curretIndex = 0;
+    for (int i = 1; i < allPoints.size() - 1; i++)
     {
-        float dis =
-            distance(allPoints[i], allPoints[curIndex], allPoints[length - 1]);
+        float dis = distance(allPoints[i], allPoints[curretIndex], allPoints[allPoints.size() - 1]);
         if (dis > epsilon)
         {
-            curIndex = i;
+            curretIndex = i;
             simplifyPoints.push_back(allPoints[i]);
         }
     }
-    simplifyPoints.push_back(allPoints[length - 1]);
+    simplifyPoints.push_back(allPoints[allPoints.size() - 1]);
 
-    for (int i = 0; i < simplifyPoints.size() - 1; i++)
+    for (int i = 0; i < simplifyPoints.size() - 2; i++)
     {
         draw_line(simplifyPoints[i], simplifyPoints[i + 1], window);
         //* Or draw the point
         // Eigen::Vector3f line_color = {255, 255, 255};
         // drawPoint(simplifyPoints[i], line_color, window);
-    }
-}
-
-int findTheBottomPointIndex(const std::vector<cv::Point2f> &control_points)
-{
-    int bottomIndex = control_points[0].y;
-    for (int i = 1; i < control_points.size() - 1; i++)
-    {
-        cv::Point2f curPoint = control_points[i];
-        cv::Point2f botPoint = control_points[bottomIndex];
-        if (curPoint.y < botPoint.y ||
-            (curPoint.y == botPoint.y && curPoint.x < botPoint.x))
-        {
-            bottomIndex = i;
-        }
-    }
-    return bottomIndex;
-}
-
-void convexHull(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
-{
-    //* Graham's Scan algorithm
-    int botIndex = findTheBottomPointIndex(control_points);
-    for (int i = 0; i < control_points.size() - 1; i++)
-    {
-        // draw_line(control_points[i], control_points[i + 1], window);
     }
 }
 
@@ -274,11 +243,10 @@ int main()
             cv::circle(window, point, 3, {255, 0, 255}, 3);
         }
 
-        if (control_points.size() == 15)
+        if (control_points.size() == 5)
         {
             // naive_bezier(control_points, window);
-            // bezier(control_points, window);
-            convexHull(control_points, window);
+            bezier(control_points, window);
 
             cv::imshow("Bezier Curve", window);
             cv::imwrite("my_bezier_curve.png", window);
@@ -287,7 +255,7 @@ int main()
             return 0;
         }
 
-        cv::imshow("Bezier Curve", window);
+        cv::imshow("Window", window);
         key = cv::waitKey(20);
     }
 
