@@ -7,7 +7,7 @@ std::vector<cv::Point2f> control_points;
 
 void mouse_handler(int event, int x, int y, int flags, void *userdata)
 {
-    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 5)
+    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 15)
     {
         std::cout << "Left button of the mouse is clicked - position (" << x
                   << ", " << y << ")" << '\n';
@@ -212,7 +212,7 @@ void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
     simplifyPoints.push_back(allPoints[0]);
     int curIndex = 0;
     int length = allPoints.size();
-    for (int i = 1; i < length; i++)
+    for (int i = 1; i < length - 1; i++)
     {
         float dis =
             distance(allPoints[i], allPoints[curIndex], allPoints[length - 1]);
@@ -235,8 +235,8 @@ void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 
 int findTheBottomPointIndex(const std::vector<cv::Point2f> &control_points)
 {
-    int bottomIndex = 0;
-    for (int i = 1; i < control_points.size(); i++)
+    int bottomIndex = control_points[0].y;
+    for (int i = 1; i < control_points.size() - 1; i++)
     {
         cv::Point2f curPoint = control_points[i];
         cv::Point2f botPoint = control_points[bottomIndex];
@@ -249,42 +249,13 @@ int findTheBottomPointIndex(const std::vector<cv::Point2f> &control_points)
     return bottomIndex;
 }
 
-struct Interval
-{
-    float cosine;
-    cv::Point2f point;
-};
-
-bool compareInterval(Interval i1, Interval i2)
-{
-    return (i1.cosine < i2.cosine);
-}
-
 void convexHull(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 {
     //* Graham's Scan algorithm
-    std::vector<Interval> sortedPonts;
-    // Interval sortedPonts[control_points.size() - 1];
     int botIndex = findTheBottomPointIndex(control_points);
-    cv::Point2f botPoint = control_points[botIndex];
-    std::cout << "botPoint: " << botIndex << '\n';
-    cv::Point2f xPoint(1, 0);
-    for (int i = 0; i < control_points.size(); i++)
-    {
-        if (i == botIndex)
-        {
-            continue;
-        }
-        float cosine = (control_points[i] - botPoint).dot(xPoint) /
-                       cv::norm(control_points[i] - botPoint);
-        sortedPonts.push_back({cosine, control_points[i]});
-    }
-
-   
-    std::sort(sortedPonts.begin(), sortedPonts.end(), compareInterval);
     for (int i = 0; i < control_points.size() - 1; i++)
     {
-        std::cout << "frame count: " << sortedPonts[i].cosine << '\n';
+        // draw_line(control_points[i], control_points[i + 1], window);
     }
 }
 
@@ -303,7 +274,7 @@ int main()
             cv::circle(window, point, 3, {255, 0, 255}, 3);
         }
 
-        if (control_points.size() == 5)
+        if (control_points.size() == 15)
         {
             // naive_bezier(control_points, window);
             // bezier(control_points, window);
