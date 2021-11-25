@@ -7,7 +7,7 @@ std::vector<cv::Point2f> control_points;
 
 void mouse_handler(int event, int x, int y, int flags, void *userdata)
 {
-    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 18)
+    if (event == cv::EVENT_LBUTTONDOWN && control_points.size() < 15)
     {
         std::cout << "Left button of the mouse is clicked - position (" << x
                   << ", " << 700 - y << ")" << '\n';
@@ -56,13 +56,14 @@ float distance(cv::Point2f p, cv::Point2f p1, cv::Point2f p2)
     cv::Vec2f v2(p2 - p1);
     float dis1 = cv::norm(p - p1);
     float dis2 = cv::norm(p2 - p1);
-    return std::abs((v1.dot(v2) / (dis1 * dis2)) * dis1);
+    return (v1.dot(v2) / (dis1 * dis2)) * dis1;
 }
 
 void drawPoint(cv::Point2f point, Eigen::Vector3f line_color, cv::Mat &window)
 {
     //* 首先，p点本身需要上色
     window.at<cv::Vec3b>(700 - point.y, point.x)[1] = 255;
+
     //* 提高 反走样
     float minX = std::floor(point.x);
     float minY = std::floor(point.y);
@@ -96,16 +97,12 @@ void drawPoint(cv::Point2f point, Eigen::Vector3f line_color, cv::Mat &window)
 
 void draw_line(cv::Point2f begin, cv::Point2f end, cv::Mat &window)
 {
-    Eigen::Vector3f line_color = {255, 255, 255};
-    if (std::abs(begin.x - end.x) <= 0.5 && std::abs(begin.y - end.y) <= 0.5)
-    {
-        drawPoint(begin, line_color, window);
-        return;
-    }
     auto x1 = begin.x;
     auto y1 = begin.y;
     auto x2 = end.x;
     auto y2 = end.y;
+
+    Eigen::Vector3f line_color = {255, 255, 255};
 
     int x, y, dx, dy, dx1, dy1, px, py, xe, ye, i;
 
@@ -210,7 +207,7 @@ void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
     }
 
     //* Use Ramer-Douglas-Peucker algorithm simplify the points
-    const float epsilon = 0;
+    const float epsilon = 30;
 
     std::vector<cv::Point2f> simplifyPoints;
     simplifyPoints.push_back(allPoints[0]);
@@ -231,13 +228,13 @@ void bezier(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
     for (int i = 0; i < simplifyPoints.size() - 1; i++)
     {
         draw_line(simplifyPoints[i], simplifyPoints[i + 1], window);
-        //* Or draw the points this can have the antialising
+        //* Or draw the points
         // Eigen::Vector3f line_color = {255, 255, 255};
         // drawPoint(simplifyPoints[i], line_color, window);
     }
 }
 
-int findTheBottomPointIndex(const std::vector<cv::Point2f> control_points)
+int findTheBottomPointIndex(const std::vector<cv::Point2f> &control_points)
 {
     int bottomIndex = 0;
     for (int i = 1; i < control_points.size(); i++)
@@ -271,12 +268,8 @@ enum ConvexHullAlgorithm
 };
 
 std::vector<cv::Point2f> getPointsByGrahamScan(
-    const std::vector<cv::Point2f> control_points)
+    const std::vector<cv::Point2f> &control_points)
 {
-    if (control_points.size() <= 1)
-    {
-        return control_points;
-    }
     //* Graham's Scan algorithm
     std::vector<PointWithCosine> sortedPonts;
     int botIndex = findTheBottomPointIndex(control_points);
@@ -319,92 +312,10 @@ std::vector<cv::Point2f> getPointsByGrahamScan(
     return resultPoints;
 }
 
-std::vector<cv::Point2f> findTangentPointsInSubhull(
-    std::vector<cv::Point2f> subhull, cv::Point2f externalPoint)
+findNextPointByTangent(onst std::vector<cv::Point2f> &control_points,
+                       cv::Point2f lastPoint)
 {
-    std::vector<cv::Point2f> result;
-    //* find lowest the tangent lastPoint to subhull
-    for (int j = 0; j < subhull.size(); j++)
-    {
-        if (externalPoint == subhull[j])
-        {
-            continue;
-        }
-        int nextIndex = j + 1;
-        int lastIndex = j - 1;
-        if (j + 1 >= subhull.size())
-        {
-            nextIndex = 0;
-        }
-        if (j == 0)
-        {
-            lastIndex = subhull.size() - 1;
-        }
-
-        if ((subhull[j] - externalPoint)
-                    .cross(subhull[j] - subhull[nextIndex]) *
-                (subhull[j] - externalPoint)
-                    .cross(subhull[j] - subhull[lastIndex]) >=
-            0)
-        {
-            result.push_back(subhull[j]);
-        }
-    }
-    return result;
-}
-
-cv::Point2f normalizeV2(const cv::Point2f &v)
-{
-    cv::Point2f res;
-    float mag2 = v.x * v.x + v.y * v.y;
-    if (mag2 > 0)
-    {
-        float invMag = 1 / sqrtf(mag2);
-        res.x = v.x * invMag;
-        res.y = v.y * invMag;
-        return res;
-    }
-
-    return v;
-}
-
-void findNextPointByTangent(std::vector<std::vector<cv::Point2f>> subhulls,
-                            std::vector<cv::Point2f> &resultPoints)
-{
-    cv::Vec2f v1;
-    if (resultPoints.size() <= 1)
-    {
-        v1 = (1, 0);
-    }
-    else
-    {
-        v1 = (resultPoints[resultPoints.size() - 1] -
-              resultPoints[resultPoints.size() - 2]);
-    }
-
-    //* the each subhull lowest tangent points
-    std::vector<cv::Point2f> tangentPoints;
-
-    for (int i = 0; i < subhulls.size(); i++)
-    {
-        std::vector<cv::Point2f> tt = findTangentPointsInSubhull(
-            subhulls[i], resultPoints[resultPoints.size() - 1]);
-        for (int j = 0; j < tt.size(); j++)
-        {
-            tangentPoints.push_back(tt[j]);
-        }
-    }
-
-    std::vector<PointWithCosine> sortedPonts;
-    for (int i = 0; i < tangentPoints.size(); i++)
-    {
-        cv::Vec2f vec(tangentPoints[i] - resultPoints[resultPoints.size() - 1]);
-        float cosine = normalizeV2(v1).dot(normalizeV2(vec));
-        sortedPonts.push_back({cosine, tangentPoints[i]});
-    }
-    std::sort(sortedPonts.begin(), sortedPonts.end(), compareCosine);
-
-    resultPoints.push_back(sortedPonts[0].point);
+    cv::Point2f lowestPonit;
 }
 
 void getConvexHull(const std::vector<cv::Point2f> &control_points,
@@ -415,24 +326,19 @@ void getConvexHull(const std::vector<cv::Point2f> &control_points,
     {
     case Graham_Scan: {
         resultPoints = getPointsByGrahamScan(control_points);
-        break;
     }
     case Chan: {
         int pointsCount = control_points.size();
-        cv::Point2f botPoint =
-            control_points[findTheBottomPointIndex(control_points)];
+        int botIndex = findTheBottomPointIndex(control_points);
+        cv::Point2f botPoint = control_points[botIndex];
 
         for (int t = 1; t < pointsCount; t++)
         {
             resultPoints.clear();
-            std::vector<std::vector<cv::Point2f>> subhulls;
             int m = std::min(pointsCount, (int)std::pow(2, std::pow(2, t)));
-            if (m <= 0)
-            {
-                m = pointsCount;
-            }
-            // m = pointsCount;
-            int k = std::ceil((float)pointsCount / (float)m);
+            int k = std::ceil((float)pointsCount / (float)m); // m = 4 k = 4
+            std::vector<std::vector<cv::Point2f>> subhulls;
+
             for (int i = 0; i < k; i++)
             {
                 std::vector<cv::Point2f> subPoints;
@@ -444,39 +350,19 @@ void getConvexHull(const std::vector<cv::Point2f> &control_points,
                     }
                     subPoints.push_back(control_points[j + i * m]);
                 }
-                std::vector<cv::Point2f> subhull;
-                subhull = getPointsByGrahamScan(subPoints);
-                if (subhull.size() > 1)
-                {
-                    subhull.erase(subhull.end());
-                }
-                subhulls.push_back(subhull);
+                subhulls.push_back(getPointsByGrahamScan(subPoints));
             }
+            // find p0 with each subhull tangent , find all the lowest p1
             resultPoints.push_back(botPoint);
-
-            for (int i = 0; i < m; i++)
-            {
-                findNextPointByTangent(subhulls, resultPoints);
-            }
-
-            //* find all the points
-            if (resultPoints[resultPoints.size() - 1].x == botPoint.x &&
-                resultPoints[resultPoints.size() - 1].y == botPoint.y)
+            resultPoints.push_back(
+                findNextPointByTangent(resultPoints.size() - 1, subhulls));
+            if (resultPoints[resultPoints.size() - 1] == botPoint)
             {
                 break;
             }
         }
-        break;
     }
     }
-
-    //* test is tanget function is fine
-    // int pointsCount = control_points.size();
-    // cv::Point2f botPoint =
-    //     control_points[findTheBottomPointIndex(control_points)];
-    // resultPoints = findTangentPointsInSubhull(
-    //     getPointsByGrahamScan(control_points), botPoint);
-
     for (int i = 0; i < resultPoints.size() - 1; i++)
     {
         draw_line(resultPoints[i], resultPoints[i + 1], window);
@@ -499,7 +385,7 @@ int main()
                        {255, 0, 255}, 3);
         }
 
-        if (control_points.size() == 18)
+        if (control_points.size() == 15)
         {
             // naive_bezier(control_points, window);
             // bezier(control_points, window);
