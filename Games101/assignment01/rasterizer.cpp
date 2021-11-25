@@ -138,8 +138,6 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
     auto &buf = pos_buf[pos_buffer.pos_id]; //* the vertex of triangle
     auto &ind = ind_buf[ind_buffer.ind_id]; //* the index of the vertex
 
-    //* for solve precision problem
-    //* 
     float f1 = (100 - 0.1) / 2.0; //49.95
     float f2 = (100 + 0.1) / 2.0; //50.05 5045.05
 

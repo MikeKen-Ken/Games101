@@ -149,37 +149,16 @@ auto to_vec4(const Eigen::Vector3f &v3, float w = 1.0f)
 
 static bool insideTriangle(int x, int y, const Vector4f *_v)
 {
-    // Vector3f v[3];
-    // for (int i = 0; i < 3; i++)
-    //     v[i] = {_v[i].x(), _v[i].y(), 1.0};
-    // Vector3f f0, f1, f2;
-    // f0 = v[1].cross(v[0]);
-    // f1 = v[2].cross(v[1]);
-    // f2 = v[0].cross(v[2]);
-    // Vector3f p(x, y, 1.);
-    // if ((p.dot(f0) * f0.dot(v[2]) > 0) && (p.dot(f1) * f1.dot(v[0]) > 0) && (p.dot(f2) * f2.dot(v[1]) > 0))
-    //     return true;
-    // return false;
-
     Vector3f v[3];
     for (int i = 0; i < 3; i++)
-        v[i] = {_v[i].x(), _v[i].y(), 0.0};
-    Vector3f point(x, y, 0.0);
-    float sign1 = (point - v[0]).cross(v[1] - v[0]).z();
-    float sign2 = (point - v[1]).cross(v[2] - v[1]).z();
-    float sign3 = (point - v[2]).cross(v[0] - v[2]).z();
-    //* close back-face culling
-    // if (sign1 * sign2 > 0 && sign2 * sign3 > 0)
-    // {
-    //     return true;
-    // }
-    //* open back-face culling
-    //* Most rasterizers and even ray-tracer for that matter may not render triangles
-    //* whose normal is facing away from the camera. This is called *back-face* culling.
-    if (sign1 < 0 && sign2 < 0 && sign3 < 0)
-    {
+        v[i] = {_v[i].x(), _v[i].y(), 1.0};
+    Vector3f f0, f1, f2;
+    f0 = v[1].cross(v[0]);
+    f1 = v[2].cross(v[1]);
+    f2 = v[0].cross(v[2]);
+    Vector3f p(x, y, 1.);
+    if ((p.dot(f0) * f0.dot(v[2]) > 0) && (p.dot(f1) * f1.dot(v[0]) > 0) && (p.dot(f2) * f2.dot(v[1]) > 0))
         return true;
-    }
     return false;
 }
 
@@ -221,11 +200,11 @@ void rst::rasterizer::draw(std::vector<Triangle *> &TriangleList)
             mvp * t->v[2]};
         // Homogeneous division
 
-        //*使用的投影矩阵为
-        //*   n  0  0   0         x         x
-        //*   0  n  0   0         y         y
-        //*   0  0  n+f nf    *   z   =     (n+f)z+nf
-        //*   0  0  -1  0         1         -z
+        //*这里展开说明一下，使用的投影矩阵为
+        //*   n  0  0   0
+        //*   0  n  0   0
+        //*   0  0  n+f nf
+        //*   0  0  -1  0
         //*那么对于每一个 v 中的元素 v[i]，其 x,y,z 坐标都对应了进行MVP变换之后的坐标，
         //*但是 w 坐标保存了进行P变换的 z 坐标，这一点对于我们后续进行插值运算十分重要，这也是为何没有在齐次除法的时候进行
         for (auto &vec : v)

@@ -7,7 +7,6 @@
 #include "rasterizer.hpp"
 #include <opencv2/opencv.hpp>
 #include <math.h>
-#include <iostream>
 
 rst::pos_buf_id rst::rasterizer::load_positions(const std::vector<Eigen::Vector3f> &positions)
 {
@@ -46,7 +45,6 @@ double sign_func(double x)
 static bool insideTriangle(float x, float y, const Vector3f *_v)
 {
     // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
-
     Vector3f v[3];
     for (int i = 0; i < 3; i++)
         v[i] = {_v[i].x(), _v[i].y(), 1.0};
@@ -58,20 +56,6 @@ static bool insideTriangle(float x, float y, const Vector3f *_v)
     if ((p.dot(f0) * f0.dot(v[2]) > 0) && (p.dot(f1) * f1.dot(v[0]) > 0) && (p.dot(f2) * f2.dot(v[1]) > 0))
         return true;
     return false;
-
-    // Vector3f v[3];
-    // for (int i = 0; i < 3; i++)
-    //     v[i] = {_v[i].x(), _v[i].y(), 0.0};
-
-    // Vector3f point(x, y, 0.0);
-    // float sign1 = (point - v[0]).cross(v[1] - v[0]).z();
-    // float sign2 = (point - v[1]).cross(v[2] - v[1]).z();
-    // float sign3 = (point - v[2]).cross(v[0] - v[2]).z();
-    // if (sign1 * sign2 > 0 && sign2 * sign3 > 0)
-    // {
-    //     return true;
-    // }
-    // return false;
 }
 
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f *v)
@@ -104,7 +88,6 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
         {
             vec /= vec.w();
         }
-
         // Viewport transformation
         for (auto &vert : v)
         {
