@@ -250,13 +250,13 @@ int findTheBottomPointIndex(const std::vector<cv::Point2f> &control_points)
     return bottomIndex;
 }
 
-struct PointWithCosine
+struct Interval
 {
     float cosine;
     cv::Point2f point;
 };
 
-bool compareCosine(PointWithCosine i1, PointWithCosine i2)
+bool compareInterval(Interval i1, Interval i2)
 {
     return (i1.cosine > i2.cosine);
 }
@@ -264,7 +264,7 @@ bool compareCosine(PointWithCosine i1, PointWithCosine i2)
 void convexHull(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
 {
     //* Graham's Scan algorithm
-    std::vector<PointWithCosine> sortedPonts;
+    std::vector<Interval> sortedPonts;
     int botIndex = findTheBottomPointIndex(control_points);
     cv::Point2f botPoint = control_points[botIndex];
     cv::Point2f xAxis(1, 0);
@@ -278,7 +278,7 @@ void convexHull(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
                        cv::norm(control_points[i] - botPoint);
         sortedPonts.push_back({cosine, control_points[i]});
     }
-    std::sort(sortedPonts.begin(), sortedPonts.end(), compareCosine);
+    std::sort(sortedPonts.begin(), sortedPonts.end(), compareInterval);
 
     std::vector<cv::Point2f> resultPoints;
     //* push start point
@@ -294,7 +294,7 @@ void convexHull(const std::vector<cv::Point2f> &control_points, cv::Mat &window)
         {
             resultPoints.push_back(sortedPonts[i].point);
         }
-        else
+        else if (cosine <= 0)
         {
             resultPoints.pop_back();
             i--;
