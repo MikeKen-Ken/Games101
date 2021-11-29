@@ -2,14 +2,15 @@
 // Created by goksu on 4/6/19.
 //
 
-#include <algorithm>
-#include <vector>
 #include "rasterizer.hpp"
-#include <opencv2/opencv.hpp>
-#include <math.h>
+#include <algorithm>
 #include <iostream>
+#include <math.h>
+#include <opencv2/opencv.hpp>
+#include <vector>
 
-rst::pos_buf_id rst::rasterizer::load_positions(const std::vector<Eigen::Vector3f> &positions)
+rst::pos_buf_id rst::rasterizer::load_positions(
+    const std::vector<Eigen::Vector3f> &positions)
 {
     auto id = get_next_id();
     pos_buf.emplace(id, positions);
@@ -17,7 +18,8 @@ rst::pos_buf_id rst::rasterizer::load_positions(const std::vector<Eigen::Vector3
     return {id};
 }
 
-rst::ind_buf_id rst::rasterizer::load_indices(const std::vector<Eigen::Vector3i> &indices)
+rst::ind_buf_id rst::rasterizer::load_indices(
+    const std::vector<Eigen::Vector3i> &indices)
 {
     auto id = get_next_id();
     ind_buf.emplace(id, indices);
@@ -25,7 +27,8 @@ rst::ind_buf_id rst::rasterizer::load_indices(const std::vector<Eigen::Vector3i>
     return {id};
 }
 
-rst::col_buf_id rst::rasterizer::load_colors(const std::vector<Eigen::Vector3f> &cols)
+rst::col_buf_id rst::rasterizer::load_colors(
+    const std::vector<Eigen::Vector3f> &cols)
 {
     auto id = get_next_id();
     col_buf.emplace(id, cols);
@@ -45,7 +48,8 @@ double sign_func(double x)
 
 static bool insideTriangle(float x, float y, const Vector3f *_v)
 {
-    // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+    // TODO : Implement this function to check if the point (x, y) is inside the
+    // triangle represented by _v[0], _v[1], _v[2]
 
     Vector3f v[3];
     for (int i = 0; i < 3; i++)
@@ -55,7 +59,8 @@ static bool insideTriangle(float x, float y, const Vector3f *_v)
     f1 = v[2].cross(v[1]);
     f2 = v[0].cross(v[2]);
     Vector3f p(x, y, 1.);
-    if ((p.dot(f0) * f0.dot(v[2]) > 0) && (p.dot(f1) * f1.dot(v[0]) > 0) && (p.dot(f2) * f2.dot(v[1]) > 0))
+    if ((p.dot(f0) * f0.dot(v[2]) > 0) && (p.dot(f1) * f1.dot(v[0]) > 0) &&
+        (p.dot(f2) * f2.dot(v[1]) > 0))
         return true;
     return false;
 
@@ -74,15 +79,29 @@ static bool insideTriangle(float x, float y, const Vector3f *_v)
     // return false;
 }
 
-static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f *v)
+static std::tuple<float, float, float> computeBarycentric2D(float x, float y,
+                                                            const Vector3f *v)
 {
-    float c1 = (x * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * y + v[1].x() * v[2].y() - v[2].x() * v[1].y()) / (v[0].x() * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * v[0].y() + v[1].x() * v[2].y() - v[2].x() * v[1].y());
-    float c2 = (x * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * y + v[2].x() * v[0].y() - v[0].x() * v[2].y()) / (v[1].x() * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * v[1].y() + v[2].x() * v[0].y() - v[0].x() * v[2].y());
-    float c3 = (x * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * y + v[0].x() * v[1].y() - v[1].x() * v[0].y()) / (v[2].x() * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * v[2].y() + v[0].x() * v[1].y() - v[1].x() * v[0].y());
+    float c1 =
+        (x * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * y +
+         v[1].x() * v[2].y() - v[2].x() * v[1].y()) /
+        (v[0].x() * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * v[0].y() +
+         v[1].x() * v[2].y() - v[2].x() * v[1].y());
+    float c2 =
+        (x * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * y +
+         v[2].x() * v[0].y() - v[0].x() * v[2].y()) /
+        (v[1].x() * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * v[1].y() +
+         v[2].x() * v[0].y() - v[0].x() * v[2].y());
+    float c3 =
+        (x * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * y +
+         v[0].x() * v[1].y() - v[1].x() * v[0].y()) /
+        (v[2].x() * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * v[2].y() +
+         v[0].x() * v[1].y() - v[1].x() * v[0].y());
     return {c1, c2, c3};
 }
 
-void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf_id col_buffer, Primitive type)
+void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer,
+                           col_buf_id col_buffer, Primitive type)
 {
     auto &buf = pos_buf[pos_buffer.pos_id];
     auto &ind = ind_buf[ind_buffer.ind_id];
@@ -95,10 +114,9 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
     for (auto &i : ind)
     {
         Triangle t;
-        Eigen::Vector4f v[] = {
-            mvp * to_vec4(buf[i[0]], 1.0f),
-            mvp * to_vec4(buf[i[1]], 1.0f),
-            mvp * to_vec4(buf[i[2]], 1.0f)};
+        Eigen::Vector4f v[] = {mvp * to_vec4(buf[i[0]], 1.0f),
+                               mvp * to_vec4(buf[i[1]], 1.0f),
+                               mvp * to_vec4(buf[i[2]], 1.0f)};
         // Homogeneous division
         for (auto &vec : v)
         {
@@ -152,13 +170,14 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
 
     const bool SSAA = false;
 
-    // TODO :iterate through the pixel and find if the current pixel is inside the triangle
-    //! 因为最大的像素点被int取整了一次，此处使用<=保证可以取到最远边界的像素点
+    // TODO :iterate through the pixel and find if the current pixel is inside
+    // the triangle
+    //! because the largest position's pixel was int once, so <= can guarante we
+    //! can get the farest pixel of the boundary
     for (int x = min_x; x <= max_x; x++)
     {
         for (int y = min_y; y <= max_y; y++)
         {
-            //* 提高 这里需要对采样点分别维护子采样点对应的深度列表和颜色列表
             if (SSAA)
             {
                 colorWeight = {0, 0, 0};
@@ -167,23 +186,23 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
                 {
                     for (int yi = 1, yTimes = 0; yi < 4; yi += 2, yTimes++)
                     {
-                        std::tie(alpha, beta, gamma) = computeBarycentric2D(x + xi * 0.25, y + yi * 0.25, t.v);
-                        w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-                        z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                        std::tie(alpha, beta, gamma) = computeBarycentric2D(
+                            x + xi * 0.25, y + yi * 0.25, t.v);
+                        w_reciprocal =
+                            1.0 / (alpha / v[0].w() + beta / v[1].w() +
+                                   gamma / v[2].w());
+                        z_interpolated = alpha * v[0].z() / v[0].w() +
+                                         beta * v[1].z() / v[1].w() +
+                                         gamma * v[2].z() / v[2].w();
                         z_interpolated *= w_reciprocal;
                         index = get_sub_index(x * 2 + xTimes, y * 2 + yTimes);
-                        //*　共四种情况
-                        //* 1.三角形内 距离视点近     采用近处也就是本三角形的t.color
-                        //* 2.三角形内 距离视点远     采用远处缓冲区的color
-                        //* 3.三角形外 距离视点近     采用远处缓冲区的color
-                        //* 4.三角形外 距离视点远     采用远处缓冲区的color
-                        if (z_interpolated > subdepth_buf[index] && insideTriangle(x + xi * 0.25, y + yi * 0.25, t.v))
+                        if (z_interpolated > subdepth_buf[index] &&
+                            insideTriangle(x + xi * 0.25, y + yi * 0.25, t.v))
                         {
                             subdepth_buf[index] = z_interpolated;
                             subcolor_buf[index] = color;
                             colorWeight += color;
                         }
-                        //* 采用远处缓冲区的color
                         else
                         {
                             colorWeight += subcolor_buf[index];
@@ -196,23 +215,32 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
             }
             else
             {
-                // TODO :If so, use the following code to get the interpolated z value.
+                // TODO :If so, use the following code to get the interpolated z
+                // value.
                 //* 这里取像素 中心点 判断是否在三角形内
                 if (insideTriangle(x + 0.5, y + 0.5, t.v))
                 {
-                    std::tie(alpha, beta, gamma) = computeBarycentric2D(x + 0.5, y + 0.5, t.v);
+                    std::tie(alpha, beta, gamma) =
+                        computeBarycentric2D(x + 0.5, y + 0.5, t.v);
                     //* v[i].w() 保存的是透视投影变换之前的z的值
-                    w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                    w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() +
+                                          gamma / v[2].w());
                     //* 插值出来质心的z， z需要先除w归一化
-                    z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                    z_interpolated = alpha * v[0].z() / v[0].w() +
+                                     beta * v[1].z() / v[1].w() +
+                                     gamma * v[2].z() / v[2].w();
                     //* 投影变换之后 质心是变化的
                     //*通过这种方式，我们计算得到了当前扫描到的三角形片元中的点在这个三角形片元中的重心坐标，
-                    //*但是需要注意的一点是，经过 projection 变换，三角形重心坐标并不会保持不变，
+                    //*但是需要注意的一点是，经过 projection
+                    //变换，三角形重心坐标并不会保持不变，
                     //*换句话说就是变换前后的点在三角形中的重心坐标并不是不变的，我们计算得到的重心坐标是变换后的三角形片元中的坐标，
-                    //*并不能直接用于插值，需要在计算出摄像机空间中这一点的重心坐标 α , β , γ \alpha,\beta,\gammaα,β,γ 后，
+                    //*并不能直接用于插值，需要在计算出摄像机空间中这一点的重心坐标
+                    //α , β , γ \alpha,\beta,\gammaα,β,γ 后，
                     //*依据这个重心坐标才能够进行插值计算，这也是下面这一段代码所作的事情
                     z_interpolated *= w_reciprocal;
-                    // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+                    // TODO : set the current pixel (use the set_pixel function)
+                    // to the color of the triangle (use getColor function) if
+                    // it should be painted.
                     if (z_interpolated > depth_buf[get_index(x, y)])
                     {
                         point << (float)x, (float)y, 1.0;
@@ -244,13 +272,17 @@ void rst::rasterizer::clear(rst::Buffers buff)
 {
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color)
     {
-        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{255, 0, 0});
-        std::fill(subcolor_buf.begin(), subcolor_buf.end(), Eigen::Vector3f{255, 0, 0});
+        std::fill(frame_buf.begin(), frame_buf.end(),
+                  Eigen::Vector3f{255, 0, 0});
+        std::fill(subcolor_buf.begin(), subcolor_buf.end(),
+                  Eigen::Vector3f{255, 0, 0});
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
-        std::fill(depth_buf.begin(), depth_buf.end(), -1 * std::numeric_limits<float>::infinity());
-        std::fill(subdepth_buf.begin(), subdepth_buf.end(), -1 * std::numeric_limits<float>::infinity());
+        std::fill(depth_buf.begin(), depth_buf.end(),
+                  -1 * std::numeric_limits<float>::infinity());
+        std::fill(subdepth_buf.begin(), subdepth_buf.end(),
+                  -1 * std::numeric_limits<float>::infinity());
     }
 }
 
@@ -274,7 +306,8 @@ int rst::rasterizer::get_sub_index(int x, int y)
     return x + std::max(0, (y - 1)) * 2 * width;
 }
 //* 此处颜色buffer顺序不能混乱
-void rst::rasterizer::set_pixel(const Eigen::Vector3f &point, const Eigen::Vector3f &color)
+void rst::rasterizer::set_pixel(const Eigen::Vector3f &point,
+                                const Eigen::Vector3f &color)
 {
     // old index: auto ind = point.y() + point.x() * width;
     auto ind = (height - 1 - point.y()) * width + point.x();
