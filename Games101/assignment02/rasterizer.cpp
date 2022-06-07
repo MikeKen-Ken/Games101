@@ -225,18 +225,11 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t)
                     //* v[i].w() 保存的是透视投影变换之前的z的值
                     w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() +
                                           gamma / v[2].w());
-                    //* 插值出来质心的z， z需要先除w归一化
                     z_interpolated = alpha * v[0].z() / v[0].w() +
                                      beta * v[1].z() / v[1].w() +
                                      gamma * v[2].z() / v[2].w();
-                    //* 投影变换之后 质心是变化的
-                    //*通过这种方式，我们计算得到了当前扫描到的三角形片元中的点在这个三角形片元中的重心坐标，
-                    //*但是需要注意的一点是，经过 projection
-                    //变换，三角形重心坐标并不会保持不变，
-                    //*换句话说就是变换前后的点在三角形中的重心坐标并不是不变的，我们计算得到的重心坐标是变换后的三角形片元中的坐标，
-                    //*并不能直接用于插值，需要在计算出摄像机空间中这一点的重心坐标
-                    //α , β , γ \alpha,\beta,\gammaα,β,γ 后，
-                    //*依据这个重心坐标才能够进行插值计算，这也是下面这一段代码所作的事情
+                   
+                    //*  透视矫正插值
                     z_interpolated *= w_reciprocal;
                     // TODO : set the current pixel (use the set_pixel function)
                     // to the color of the triangle (use getColor function) if
